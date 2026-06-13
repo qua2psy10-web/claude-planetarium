@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import PlanetariumCanvas from './components/PlanetariumCanvas'
 import SearchBar from './components/ui/SearchBar'
 import TimeControls from './components/ui/TimeControls'
@@ -10,10 +10,11 @@ import CompassRose from './components/ui/CompassRose'
 
 export default function App() {
   const [loaded, setLoaded] = useState(false)
+  const handleLoaded = useCallback(() => setLoaded(true), [])
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
-      <PlanetariumCanvas onLoaded={() => setLoaded(true)} />
+      <PlanetariumCanvas onLoaded={handleLoaded} />
 
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-50 bg-black">

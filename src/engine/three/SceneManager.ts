@@ -23,9 +23,14 @@ export class SceneManager {
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
+  private frameCallback: (() => void) | null = null
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
+
+    // Use window dimensions as fallback when canvas hasn't been laid out yet
+    const w = canvas.clientWidth || window.innerWidth
+    const h = canvas.clientHeight || window.innerHeight
 
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -33,11 +38,11 @@ export class SceneManager {
       alpha: false,
     })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    this.renderer.setSize(canvas.clientWidth, canvas.clientHeight)
+    this.renderer.setSize(w, h)
     this.renderer.setClearColor(0x000000, 1)
 
     this.scene = new THREE.Scene()
-    this.camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000)
+    this.camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000)
     this.camera.position.set(0, 0, 0)
 
     this.skyDome = new SkyDome()
@@ -52,6 +57,9 @@ export class SceneManager {
     this.cameraController = new CameraController(this.camera, canvas)
 
     window.addEventListener('resize', this.onResize)
+
+    // Start render loop immediately so the sky dome is visible before star data loads
+    this.startLoop()
   }
 
   loadStarData(stars: HygStar[], linesData: ConLinesData) {
@@ -97,10 +105,14 @@ export class SceneManager {
     return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, lst, latRad)
   }
 
-  startRenderLoop(onFrame: () => void) {
+  setFrameCallback(fn: () => void) {
+    this.frameCallback = fn
+  }
+
+  private startLoop() {
     const loop = () => {
       this.rafId = requestAnimationFrame(loop)
-      onFrame()
+      this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
     }
     this.rafId = requestAnimationFrame(loop)

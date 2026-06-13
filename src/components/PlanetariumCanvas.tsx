@@ -15,6 +15,9 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
   const sceneRef = useRef<SceneManager | null>(null)
   const planetsRef = useRef<PlanetData[]>([])
   const lastFrameRef = useRef<number>(Date.now())
+  // Keep onLoaded in a ref so it never needs to be a useEffect dependency
+  const onLoadedRef = useRef(onLoaded)
+  onLoadedRef.current = onLoaded
 
   const store = usePlanetariumStore()
 
@@ -59,9 +62,9 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
       ([stars, lines, meta]) => {
         scene.loadStarData(stars, lines)
         buildSearchIndex(stars, meta)
-        onLoaded?.()
         lastFrameRef.current = Date.now()
-        scene.startRenderLoop(onFrame)
+        scene.setFrameCallback(onFrame)
+        onLoadedRef.current?.()
       },
     )
 
@@ -69,7 +72,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
       scene.dispose()
       sceneRef.current = null
     }
-  }, [onFrame, onLoaded])
+  }, [onFrame])
 
   // Sync FOV changes from store
   useEffect(() => {

@@ -122,6 +122,9 @@ export class StarField {
     })
 
     this.points = new THREE.Points(geo, this.material)
+    // All position attributes are (0,0,0) since the shader computes positions from RA/Dec.
+    // Disable frustum culling so Three.js doesn't skip this object.
+    this.points.frustumCulled = false
   }
 
   updateUniforms(lst: number, latRad: number, fovScale: number) {

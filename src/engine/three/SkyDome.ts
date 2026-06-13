@@ -13,8 +13,8 @@ varying float vY;
 uniform bool uAtmosphere;
 void main() {
   float t = clamp((vY + 0.08) / 0.18, 0.0, 1.0);
-  vec3 zenith = vec3(0.0, 0.0, 0.0);
-  vec3 horizon = uAtmosphere ? vec3(0.03, 0.05, 0.12) : vec3(0.01, 0.01, 0.02);
+  vec3 zenith = vec3(0.0, 0.0, 0.02);
+  vec3 horizon = uAtmosphere ? vec3(0.05, 0.08, 0.20) : vec3(0.01, 0.01, 0.03);
   vec3 color = mix(horizon, zenith, t * t);
   // slight glow below horizon
   if (vY < 0.0) {

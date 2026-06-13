@@ -67,6 +67,7 @@ export class ConstellationLines {
     })
 
     this.lineSegments = new THREE.LineSegments(geo, this.material)
+    this.lineSegments.frustumCulled = false
   }
 
   updateUniforms(lst: number, latRad: number) {

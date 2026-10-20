@@ -114,6 +114,11 @@ export class SceneManager {
     this.labels.setVisibility(constellationNames, starNames)
   }
 
+  /** The constellation whose name label is at this screen position, if any. */
+  pickConstellation(clientX: number, clientY: number): ConstellationMeta | null {
+    return this.labels.constellationAt(clientX, clientY)
+  }
+
   setEquatorialGridVisible(v: boolean) {
     this.equatorialGrid.setVisible(v)
     this.labels.setGridVisible(v)

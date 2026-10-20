@@ -1,14 +1,17 @@
 import { X } from 'lucide-react'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
+import { findConstellation } from '@/engine/data/constellationLoader'
 
 export default function InfoPanel() {
   const { selectedObject, selectObject } = usePlanetariumStore()
   if (!selectedObject) return null
 
   const { type, star, planet, constellation, altitude, azimuth } = selectedObject
+  // The constellation a selected star belongs to, for its name and story.
+  const starConstellation = star?.con ? findConstellation(star.con) : undefined
 
   return (
-    <div data-no-labels className="absolute top-16 right-4 z-30 w-64 bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
+    <div data-no-labels className="absolute top-16 right-4 z-30 w-64 max-h-[calc(100vh-6rem)] overflow-y-auto bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
       <button
         onClick={() => selectObject(null)}
         className="absolute top-3 right-3 text-white/40 hover:text-white"
@@ -19,7 +22,9 @@ export default function InfoPanel() {
       {type === 'star' && star && (
         <>
           <div className="text-yellow-300 text-lg font-bold mb-1">{star.proper || `HIP ${star.hip}`}</div>
-          <div className="text-white/60 text-xs mb-3">恒星 · {star.con && `${star.con}座`}</div>
+          <div className="text-white/60 text-xs mb-3">
+            恒星{star.con && ` · ${starConstellation?.nameJa ?? star.con}`}
+          </div>
           <div className="space-y-1 text-sm">
             <Row label="等級" value={star.mag.toFixed(2)} />
             <Row label="B-V" value={star.ci.toFixed(2)} />
@@ -28,6 +33,12 @@ export default function InfoPanel() {
             <Row label="赤経" value={`${((star.ra * 180) / Math.PI / 15).toFixed(3)}h`} />
             <Row label="赤緯" value={`${((star.dec * 180) / Math.PI).toFixed(2)}°`} />
           </div>
+          {starConstellation && (
+            <div className="mt-3 pt-3 border-t border-white/15">
+              <div className="text-xs font-semibold text-white/50 mb-1">{starConstellation.nameJa}について</div>
+              <div className="text-sm text-yellow-100 leading-relaxed">{starConstellation.mythology}</div>
+            </div>
+          )}
         </>
       )}
 
@@ -47,7 +58,8 @@ export default function InfoPanel() {
         <>
           <div className="text-blue-300 text-lg font-bold mb-1">{constellation.nameJa}</div>
           <div className="text-white/60 text-xs mb-3">{constellation.name} ({constellation.abbr})</div>
-          <div className="text-sm text-white/80 leading-relaxed">{constellation.mythology}</div>
+          <div className="text-xs font-semibold text-white/50 mb-1">神話・由来</div>
+          <div className="text-sm text-yellow-100 leading-relaxed">{constellation.mythology}</div>
         </>
       )}
     </div>

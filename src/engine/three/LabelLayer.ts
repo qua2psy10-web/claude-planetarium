@@ -61,6 +61,8 @@ export class LabelLayer {
   private showPlanets = false
   private showGrid = false
   private showAltaz = false
+  // Constellation labels drawn in the last frame, so clicks on them can be resolved.
+  private constellationHits: { rect: Rect; meta: ConstellationMeta }[] = []
 
   private width = 0
   private height = 0
@@ -131,6 +133,7 @@ export class LabelLayer {
     const { ctx } = this
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
+    this.constellationHits = []
     const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz
     if (!any) return
 
@@ -168,7 +171,9 @@ export class LabelLayer {
         const hor = equatorialToHorizontal(c.centroidRa, c.centroidDec, this.lst, this.latRad)
         if (hor.altitude < degToRad(3)) continue
         const pt = this.project(hor.altitude, hor.azimuth)
-        if (pt) this.label(placed, c.nameJa, pt.x, pt.y, 'center', CONSTELLATION_STYLE)
+        if (!pt) continue
+        const rect = this.label(placed, c.nameJa, pt.x, pt.y, 'center', CONSTELLATION_STYLE)
+        if (rect) this.constellationHits.push({ rect, meta: c })
       }
     }
 
@@ -244,6 +249,18 @@ export class LabelLayer {
     }
   }
 
+  /** The constellation whose name label is under this screen position, if any. */
+  constellationAt(clientX: number, clientY: number): ConstellationMeta | null {
+    const origin = this.host.getBoundingClientRect()
+    const x = clientX - origin.left
+    const y = clientY - origin.top
+    const slop = 8 // labels are small; make them easier to hit, especially by touch
+    for (const { rect, meta } of this.constellationHits) {
+      if (x >= rect.x0 - slop && x <= rect.x1 + slop && y >= rect.y0 - slop && y <= rect.y1 + slop) return meta
+    }
+    return null
+  }
+
   dispose() {
     this.overlay.remove()
   }
@@ -284,7 +301,7 @@ export class LabelLayer {
     y: number,
     align: 'left' | 'center',
     style: { font: string; color: string },
-  ) {
+  ): Rect | null {
     const { ctx } = this
     ctx.font = style.font
     const key = style.font + text
@@ -297,9 +314,9 @@ export class LabelLayer {
     const x0 = align === 'center' ? x - w / 2 : x
     const rect: Rect = { x0: x0 - 3, y0: y - h / 2 - 1, x1: x0 + w + 3, y1: y + h / 2 + 1 }
     // Never draw a label that would be cut off by the screen edge.
-    if (rect.x0 < 0 || rect.y0 < 0 || rect.x1 > this.width || rect.y1 > this.height) return
+    if (rect.x0 < 0 || rect.y0 < 0 || rect.x1 > this.width || rect.y1 > this.height) return null
     for (const r of placed) {
-      if (rect.x0 < r.x1 && rect.x1 > r.x0 && rect.y0 < r.y1 && rect.y1 > r.y0) return
+      if (rect.x0 < r.x1 && rect.x1 > r.x0 && rect.y0 < r.y1 && rect.y1 > r.y0) return null
     }
     placed.push(rect)
 
@@ -307,5 +324,6 @@ export class LabelLayer {
     ctx.strokeText(text, x, y)
     ctx.fillStyle = style.color
     ctx.fillText(text, x, y)
+    return rect
   }
 }

@@ -44,10 +44,13 @@ void main() {
     return;
   }
 
+  // This atan form measures azimuth from SOUTH (towards west). The scene, planets,
+  // picking and compass all use azimuth from NORTH (towards east, see
+  // horizontalToCartesian), which is this value + 180 degrees: negate x and z.
   float az = atan(sin(ha), cos(ha) * sin(uLat) - tan(aDec) * cos(uLat));
 
   float cosAlt = cos(alt);
-  vec3 pos = vec3(cosAlt * sin(az), sin(alt), -cosAlt * cos(az)) * 100.0;
+  vec3 pos = vec3(-cosAlt * sin(az), sin(alt), cosAlt * cos(az)) * 100.0;
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 

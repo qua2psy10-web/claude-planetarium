@@ -29,7 +29,7 @@ export default function TimeControls() {
   const resetToNow = () => setTime(new Date())
 
   return (
-    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2">
+    <div data-no-labels className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2">
       <div className="flex items-center gap-2 bg-black/70 backdrop-blur border border-white/20 rounded-xl px-4 py-2">
         {/* Play/Pause */}
         <button

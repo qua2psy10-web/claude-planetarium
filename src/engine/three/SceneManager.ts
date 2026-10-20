@@ -6,8 +6,9 @@ import { PlanetLayer } from './PlanetLayer'
 import { HorizonMask } from './HorizonMask'
 import { CameraController } from './CameraController'
 import { PickingManager } from './PickingManager'
+import { LabelLayer } from './LabelLayer'
 import type { HygStar } from '@/types/star'
-import type { ConstellationLines as ConLinesData } from '@/types/constellation'
+import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
 
 export class SceneManager {
@@ -20,6 +21,7 @@ export class SceneManager {
   private planetLayer: PlanetLayer
   private horizonMask: HorizonMask
   private cameraController: CameraController
+  private labels: LabelLayer
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -55,6 +57,7 @@ export class SceneManager {
     this.scene.add(this.horizonMask.mesh)
 
     this.cameraController = new CameraController(this.camera, canvas)
+    this.labels = new LabelLayer(canvas, this.camera)
 
     window.addEventListener('resize', this.onResize)
 
@@ -68,6 +71,7 @@ export class SceneManager {
     this.starField = new StarField(stars)
     this.starField.setPixelRatio(this.renderer.getPixelRatio())
     this.scene.add(this.starField.points)
+    this.labels.setStars(stars)
 
     // Constellation lines
     if (this.constellationLines) this.scene.remove(this.constellationLines.lineSegments)
@@ -83,10 +87,20 @@ export class SceneManager {
     this.starField?.updateUniforms(lst, latRad, fovScale)
     this.constellationLines?.updateUniforms(lst, latRad)
     this.cameraController.updateFov(fov)
+    this.labels.setView(lst, latRad, fov)
   }
 
   updatePlanets(planets: PlanetData[], showLabels: boolean) {
     this.planetLayer.update(planets, showLabels)
+    this.labels.setPlanets(planets, showLabels)
+  }
+
+  setConstellationMeta(meta: ConstellationMeta[]) {
+    this.labels.setConstellations(meta)
+  }
+
+  setLabelVisibility(constellationNames: boolean, starNames: boolean) {
+    this.labels.setVisibility(constellationNames, starNames)
   }
 
   setConstellationLinesVisible(v: boolean) {
@@ -115,6 +129,7 @@ export class SceneManager {
       this.rafId = requestAnimationFrame(loop)
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
+      this.labels.draw()
     }
     this.rafId = requestAnimationFrame(loop)
   }
@@ -129,11 +144,13 @@ export class SceneManager {
     this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(w, h)
+    this.labels.resize()
   }
 
   dispose() {
     this.stopRenderLoop()
     this.cameraController.dispose()
+    this.labels.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

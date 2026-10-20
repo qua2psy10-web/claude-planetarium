@@ -46,7 +46,7 @@ export default function SearchBar() {
   const showDropdown = focused && results.length > 0
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-72 z-30">
+    <div data-no-labels className="absolute top-4 left-1/2 -translate-x-1/2 w-72 z-30">
       <div className="relative flex items-center bg-black/70 backdrop-blur border border-white/20 rounded-full px-4 py-2">
         <Search size={14} className="text-white/40 shrink-0" />
         <input

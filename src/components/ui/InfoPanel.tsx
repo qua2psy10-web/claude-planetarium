@@ -1,9 +1,10 @@
 import { X } from 'lucide-react'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import { findConstellation } from '@/engine/data/constellationLoader'
+import { getMoonInfoCached } from '@/engine/astronomy/moonPhase'
 
 export default function InfoPanel() {
-  const { selectedObject, selectObject } = usePlanetariumStore()
+  const { selectedObject, selectObject, simulatedTime } = usePlanetariumStore()
   if (!selectedObject) return null
 
   const { type, star, planet, constellation, altitude, azimuth } = selectedObject
@@ -50,6 +51,7 @@ export default function InfoPanel() {
             <Row label="等級" value={planet.magnitude.toFixed(2)} />
             <Row label="高度" value={`${altitude.toFixed(1)}°`} />
             <Row label="方位角" value={`${azimuth.toFixed(1)}°`} />
+            {planet.name === 'Moon' && <MoonRows date={simulatedTime} />}
           </div>
         </>
       )}
@@ -72,5 +74,16 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="text-white/50">{label}</span>
       <span className="font-mono text-white/90">{value}</span>
     </div>
+  )
+}
+
+function MoonRows({ date }: { date: Date }) {
+  const moon = getMoonInfoCached(date)
+  return (
+    <>
+      <Row label="月相" value={moon.nameJa} />
+      <Row label="月齢" value={moon.ageDays.toFixed(1)} />
+      <Row label="輝面比" value={`${(moon.illumination * 100).toFixed(0)}%`} />
+    </>
   )
 }

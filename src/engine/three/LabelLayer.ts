@@ -3,6 +3,7 @@ import type { HygStar } from '@/types/star'
 import type { ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
+import { moonDiskRadiusPx } from '@/engine/astronomy/moonPhase'
 
 const DEG = Math.PI / 180
 
@@ -157,7 +158,19 @@ export class LabelLayer {
       for (const p of this.planets) {
         if (p.altitude < 0) continue
         const pt = this.project(degToRad(p.altitude), degToRad(p.azimuth))
-        if (pt) this.label(placed, p.nameJa || p.name, pt.x, pt.y + 18, 'center', PLANET_STYLE)
+        // The Moon is drawn as a large disk, so its name goes below the disk's edge.
+        const below = p.name === 'Moon' ? moonDiskRadiusPx(this.fov, this.height) + 12 : 18
+        if (pt) this.label(placed, p.nameJa || p.name, pt.x, pt.y + below, 'center', PLANET_STYLE)
+      }
+    }
+
+    // Keep other labels off the Moon's disk (its own name, placed above, is already in `placed`).
+    const moon = this.planets.find((p) => p.name === 'Moon')
+    if (moon && moon.altitude >= 0) {
+      const pt = this.project(degToRad(moon.altitude), degToRad(moon.azimuth))
+      if (pt) {
+        const r = moonDiskRadiusPx(this.fov, this.height) + 4
+        placed.push({ x0: pt.x - r, y0: pt.y - r, x1: pt.x + r, y1: pt.y + r })
       }
     }
 

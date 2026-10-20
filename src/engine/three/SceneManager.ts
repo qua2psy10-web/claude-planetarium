@@ -10,6 +10,7 @@ import { LabelLayer } from './LabelLayer'
 import { EquatorialGrid } from './EquatorialGrid'
 import { AltazGrid } from './AltazGrid'
 import { MeteorLayer } from './MeteorLayer'
+import { MoonLayer } from './MoonLayer'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
@@ -28,6 +29,7 @@ export class SceneManager {
   private equatorialGrid: EquatorialGrid
   private altazGrid: AltazGrid
   private meteors: MeteorLayer
+  private moon: MoonLayer
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -69,6 +71,7 @@ export class SceneManager {
     this.scene.add(this.horizonMask.mesh)
 
     this.cameraController = new CameraController(this.camera, canvas)
+    this.moon = new MoonLayer(canvas, this.camera)
     this.meteors = new MeteorLayer(canvas, this.camera)
     this.labels = new LabelLayer(canvas, this.camera)
 
@@ -103,11 +106,13 @@ export class SceneManager {
     this.cameraController.updateFov(fov)
     this.labels.setView(lst, latRad, fov)
     this.meteors.setView(lst, latRad)
+    this.moon.setLatitude(latRad)
   }
 
   updatePlanets(planets: PlanetData[], showLabels: boolean) {
     this.planetLayer.update(planets, showLabels)
     this.labels.setPlanets(planets, showLabels)
+    this.moon.setPlanets(planets)
   }
 
   setConstellationMeta(meta: ConstellationMeta[]) {
@@ -126,6 +131,11 @@ export class SceneManager {
   setEquatorialGridVisible(v: boolean) {
     this.equatorialGrid.setVisible(v)
     this.labels.setGridVisible(v)
+  }
+
+  /** Phase angle of the Moon in degrees (0 = full, 180 = new). */
+  setMoonPhase(phaseAngleDeg: number) {
+    this.moon.setPhaseAngle(phaseAngleDeg)
   }
 
   /** Shooting stars on/off; `date` is the simulated time, which decides which showers are active. */
@@ -164,6 +174,7 @@ export class SceneManager {
       this.rafId = requestAnimationFrame(loop)
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
+      this.moon.draw()
       this.meteors.draw(performance.now())
       this.labels.setRadiants(this.meteors.markedRadiants())
       this.labels.draw()
@@ -183,6 +194,7 @@ export class SceneManager {
     this.renderer.setSize(w, h)
     this.labels.resize()
     this.meteors.resize()
+    this.moon.resize()
   }
 
   dispose() {
@@ -190,6 +202,7 @@ export class SceneManager {
     this.cameraController.dispose()
     this.labels.dispose()
     this.meteors.dispose()
+    this.moon.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

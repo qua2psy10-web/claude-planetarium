@@ -1,8 +1,10 @@
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import dayjs from 'dayjs'
+import { getMoonInfoCached } from '@/engine/astronomy/moonPhase'
 
 export default function StatusBar() {
   const { simulatedTime, fov, latitude, longitude } = usePlanetariumStore()
+  const moon = getMoonInfoCached(simulatedTime)
 
   return (
     <div
@@ -15,6 +17,7 @@ export default function StatusBar() {
         {latitude >= 0 ? 'N' : 'S'}{Math.abs(latitude).toFixed(2)}° {longitude >= 0 ? 'E' : 'W'}{Math.abs(longitude).toFixed(2)}°
       </div>
       <div>FOV {fov.toFixed(0)}°</div>
+      <div>月齢 {moon.ageDays.toFixed(1)} · {moon.nameJa} ({Math.round(moon.illumination * 100)}%)</div>
     </div>
   )
 }

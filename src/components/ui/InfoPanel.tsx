@@ -8,7 +8,7 @@ export default function InfoPanel() {
   const { type, star, planet, constellation, altitude, azimuth } = selectedObject
 
   return (
-    <div className="absolute top-16 right-4 z-30 w-64 bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
+    <div data-no-labels className="absolute top-16 right-4 z-30 w-64 bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
       <button
         onClick={() => selectObject(null)}
         className="absolute top-3 right-3 text-white/40 hover:text-white"

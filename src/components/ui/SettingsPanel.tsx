@@ -17,7 +17,7 @@ export default function SettingsPanel() {
   const store = usePlanetariumStore()
 
   return (
-    <div className="absolute top-4 right-4 z-30">
+    <div data-no-labels className="absolute top-4 right-4 z-30">
       <button
         onClick={() => setOpen(!open)}
         className="p-2 bg-black/70 backdrop-blur border border-white/20 rounded-full text-white/60 hover:text-white transition"

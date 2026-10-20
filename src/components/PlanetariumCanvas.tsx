@@ -48,6 +48,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     planetsRef.current = planets
     sceneRef.current?.updatePlanets(planets, s.showPlanetLabels)
     sceneRef.current?.setConstellationLinesVisible(s.showConstellationLines)
+    sceneRef.current?.setLabelVisibility(s.showConstellationNames, s.showStarNames)
     sceneRef.current?.setAtmosphere(s.showAtmosphere)
   }, [])
 
@@ -61,6 +62,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     Promise.all([loadStars(), loadConstellationLines(), loadConstellationMeta()]).then(
       ([stars, lines, meta]) => {
         scene.loadStarData(stars, lines)
+        scene.setConstellationMeta(meta)
         buildSearchIndex(stars, meta)
         lastFrameRef.current = Date.now()
         scene.setFrameCallback(onFrame)

@@ -12,7 +12,7 @@ export default function CompassRose() {
   const norm = ((az % 360) + 360) % 360
 
   return (
-    <div className="absolute bottom-4 right-4 z-20 select-none flex flex-col items-center gap-1">
+    <div data-no-labels className="absolute bottom-4 right-4 z-20 select-none flex flex-col items-center gap-1">
       {/* Heading readout — the direction you are currently facing */}
       <div className="px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm border border-yellow-300/40 text-yellow-300 text-sm font-bold tabular-nums shadow">
         {headingName(norm)} {Math.round(norm)}°

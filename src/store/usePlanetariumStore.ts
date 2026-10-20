@@ -22,7 +22,7 @@ const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
   showEquatorialGrid: false,
   showAltazGrid: false,
   showAtmosphere: true,
-  showStarNames: false,
+  showStarNames: true,
 
   selectedObject: null,
 

@@ -7,6 +7,7 @@ import { HorizonMask } from './HorizonMask'
 import { CameraController } from './CameraController'
 import { PickingManager } from './PickingManager'
 import { LabelLayer } from './LabelLayer'
+import { EquatorialGrid } from './EquatorialGrid'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
@@ -22,6 +23,7 @@ export class SceneManager {
   private horizonMask: HorizonMask
   private cameraController: CameraController
   private labels: LabelLayer
+  private equatorialGrid: EquatorialGrid
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -52,6 +54,9 @@ export class SceneManager {
 
     this.planetLayer = new PlanetLayer()
     this.scene.add(this.planetLayer.group)
+
+    this.equatorialGrid = new EquatorialGrid()
+    this.scene.add(this.equatorialGrid.lineSegments)
 
     this.horizonMask = new HorizonMask()
     this.scene.add(this.horizonMask.mesh)
@@ -86,6 +91,7 @@ export class SceneManager {
     const fovScale = 75 / fov  // normalize to base FOV of 75
     this.starField?.updateUniforms(lst, latRad, fovScale)
     this.constellationLines?.updateUniforms(lst, latRad)
+    this.equatorialGrid.updateUniforms(lst, latRad)
     this.cameraController.updateFov(fov)
     this.labels.setView(lst, latRad, fov)
   }
@@ -101,6 +107,11 @@ export class SceneManager {
 
   setLabelVisibility(constellationNames: boolean, starNames: boolean) {
     this.labels.setVisibility(constellationNames, starNames)
+  }
+
+  setEquatorialGridVisible(v: boolean) {
+    this.equatorialGrid.setVisible(v)
+    this.labels.setGridVisible(v)
   }
 
   setConstellationLinesVisible(v: boolean) {

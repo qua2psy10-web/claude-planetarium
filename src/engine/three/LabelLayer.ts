@@ -4,11 +4,14 @@ import type { ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
 
+const DEG = Math.PI / 180
+
 const FONT_FAMILY = "'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif"
 
 const PLANET_STYLE = { font: `bold 14px ${FONT_FAMILY}`, color: '#ffd54a' }
 const STAR_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffe9a8' }
 const CONSTELLATION_STYLE = { font: `13px ${FONT_FAMILY}`, color: '#9fd0ff' }
+const GRID_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#7fe0c0' }
 
 // Japanese names for the best-known stars; others fall back to the IAU name.
 const STAR_NAMES_JA: Record<string, string> = {
@@ -51,6 +54,7 @@ export class LabelLayer {
   private showStars = false
   private showConstellations = false
   private showPlanets = false
+  private showGrid = false
 
   private width = 0
   private height = 0
@@ -108,12 +112,16 @@ export class LabelLayer {
     this.showStars = stars
   }
 
+  setGridVisible(show: boolean) {
+    this.showGrid = show
+  }
+
   /** Call after the WebGL frame has rendered so the camera matrices are current. */
   draw() {
     const { ctx } = this
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
-    if (!this.showStars && !this.showConstellations && !this.showPlanets) return
+    if (!this.showStars && !this.showConstellations && !this.showPlanets && !this.showGrid) return
 
     ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'
@@ -152,6 +160,46 @@ export class LabelLayer {
         if (pt) this.label(placed, c.nameJa, pt.x, pt.y, 'center', CONSTELLATION_STYLE)
       }
     }
+
+    if (this.showGrid) this.gridLabels(placed)
+  }
+
+  /**
+   * Tick labels for the equatorial grid. They sit on the RA meridian and the
+   * declination circle nearest the centre of the view, so scale marks are always
+   * on screen wherever you look.
+   */
+  private gridLabels(placed: Rect[]) {
+    const step = 15 * DEG
+    const { latRad, lst } = this
+
+    // View centre as RA/Dec: camera direction -> alt/az -> hour angle/dec.
+    this.camera.getWorldDirection(this.v)
+    const alt = Math.asin(Math.max(-1, Math.min(1, this.v.y)))
+    const az = Math.atan2(this.v.x, -this.v.z) // from north, towards east
+    const sinDec = Math.sin(latRad) * Math.sin(alt) + Math.cos(latRad) * Math.cos(alt) * Math.cos(az)
+    const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)))
+    const cosDec = Math.max(Math.cos(dec), 1e-6)
+    const sinH = (-Math.sin(az) * Math.cos(alt)) / cosDec
+    const cosH = (Math.sin(alt) - Math.sin(latRad) * sinDec) / (Math.max(Math.cos(latRad), 1e-6) * cosDec)
+    const ra = lst - Math.atan2(sinH, cosH)
+
+    const meridian = Math.round(ra / step) * step
+    // step is 15 degrees in radians, so this rounds dec to the nearest 15-degree circle.
+    const circleDec = Math.max(-75, Math.min(75, Math.round(dec / step) * 15)) * DEG
+
+    const at = (raRad: number, decRad: number, text: string) => {
+      const hor = equatorialToHorizontal(raRad, decRad, lst, latRad)
+      if (hor.altitude < 0) return
+      const pt = this.project(hor.altitude, hor.azimuth)
+      if (pt) this.label(placed, text, pt.x, pt.y, 'center', GRID_STYLE)
+    }
+
+    for (let d = -75; d <= 75; d += 15) {
+      const sign = d > 0 ? '+' : d < 0 ? '−' : ''
+      at(meridian, d * DEG, `${sign}${Math.abs(d)}°`)
+    }
+    for (let h = 0; h < 24; h++) at(h * step, circleDec, `${h}h`)
   }
 
   dispose() {

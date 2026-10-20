@@ -49,6 +49,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     sceneRef.current?.updatePlanets(planets, s.showPlanetLabels)
     sceneRef.current?.setConstellationLinesVisible(s.showConstellationLines)
     sceneRef.current?.setLabelVisibility(s.showConstellationNames, s.showStarNames)
+    sceneRef.current?.setEquatorialGridVisible(s.showEquatorialGrid)
     sceneRef.current?.setAtmosphere(s.showAtmosphere)
   }, [])
 

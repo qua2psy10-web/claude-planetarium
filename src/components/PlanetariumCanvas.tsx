@@ -50,6 +50,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     sceneRef.current?.setConstellationLinesVisible(s.showConstellationLines)
     sceneRef.current?.setLabelVisibility(s.showConstellationNames, s.showStarNames)
     sceneRef.current?.setEquatorialGridVisible(s.showEquatorialGrid)
+    sceneRef.current?.setAltazGridVisible(s.showAltazGrid)
     sceneRef.current?.setAtmosphere(s.showAtmosphere)
   }, [])
 

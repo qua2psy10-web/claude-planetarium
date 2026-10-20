@@ -8,6 +8,7 @@ import { CameraController } from './CameraController'
 import { PickingManager } from './PickingManager'
 import { LabelLayer } from './LabelLayer'
 import { EquatorialGrid } from './EquatorialGrid'
+import { AltazGrid } from './AltazGrid'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
@@ -24,6 +25,7 @@ export class SceneManager {
   private cameraController: CameraController
   private labels: LabelLayer
   private equatorialGrid: EquatorialGrid
+  private altazGrid: AltazGrid
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -57,6 +59,9 @@ export class SceneManager {
 
     this.equatorialGrid = new EquatorialGrid()
     this.scene.add(this.equatorialGrid.lineSegments)
+
+    this.altazGrid = new AltazGrid()
+    this.scene.add(this.altazGrid.group)
 
     this.horizonMask = new HorizonMask()
     this.scene.add(this.horizonMask.mesh)
@@ -112,6 +117,11 @@ export class SceneManager {
   setEquatorialGridVisible(v: boolean) {
     this.equatorialGrid.setVisible(v)
     this.labels.setGridVisible(v)
+  }
+
+  setAltazGridVisible(v: boolean) {
+    this.altazGrid.setVisible(v)
+    this.labels.setAltazVisible(v)
   }
 
   setConstellationLinesVisible(v: boolean) {

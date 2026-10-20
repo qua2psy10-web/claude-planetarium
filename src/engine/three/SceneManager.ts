@@ -66,6 +66,7 @@ export class SceneManager {
     // StarField
     if (this.starField) this.scene.remove(this.starField.points)
     this.starField = new StarField(stars)
+    this.starField.setPixelRatio(this.renderer.getPixelRatio())
     this.scene.add(this.starField.points)
 
     // Constellation lines

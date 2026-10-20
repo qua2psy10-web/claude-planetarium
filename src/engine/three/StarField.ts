@@ -5,6 +5,7 @@ const vertexShader = `
 uniform float uLST;
 uniform float uLat;
 uniform float uFovScale;
+uniform float uPixelRatio;
 
 attribute float aRa;
 attribute float aDec;
@@ -12,7 +13,7 @@ attribute float aMag;
 attribute float aBV;
 
 varying vec3 vColor;
-varying float vMag;
+varying float vBrightness;
 
 // B-V color index to RGB (approximate blackbody)
 vec3 bvToRgb(float bv) {
@@ -38,7 +39,7 @@ void main() {
   if (alt < -0.017) {  // ~-1 degree
     gl_PointSize = 0.0;
     vColor = vec3(0.0);
-    vMag = aMag;
+    vBrightness = 0.0;
     gl_Position = vec4(0.0, 0.0, 2.0, 1.0); // clip away
     return;
   }
@@ -50,29 +51,32 @@ void main() {
 
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
 
-  // Magnitude to point size: smaller mag = bigger/brighter
-  float size = uFovScale * pow(10.0, (-aMag + 6.5) * 0.2);
-  gl_PointSize = clamp(size, 0.5, 16.0);
+  // Magnitude to point size in CSS pixels (gl_PointSize is in device pixels, so
+  // scale by the pixel ratio or Retina screens draw everything at half size).
+  // Even the faintest star gets a ~2px core so it stays visible on dark panels.
+  float size = (1.8 + (6.5 - aMag) * 0.9) * pow(uFovScale, 0.5);
+  gl_PointSize = clamp(size, 2.0, 22.0) * uPixelRatio;
+
+  // Brightness is separate from size: faint stars are dimmer but never vanish.
+  vBrightness = clamp(0.45 + (6.5 - aMag) * 0.2, 0.45, 1.0);
 
   // Dim stars near horizon for realism
   float fade = smoothstep(0.0, 0.05, alt);
   vColor = bvToRgb(aBV) * fade;
-  vMag = aMag;
 }
 `
 
 const fragmentShader = `
 varying vec3 vColor;
-varying float vMag;
+varying float vBrightness;
 void main() {
   vec2 uv = gl_PointCoord - 0.5;
   float d = length(uv);
   if (d > 0.5) discard;
-  // Soft disc with bright center
-  float alpha = smoothstep(0.5, 0.0, d);
-  float core = smoothstep(0.3, 0.0, d);
-  vec3 color = mix(vColor * 0.6, vColor, core);
-  gl_FragColor = vec4(color, alpha * alpha);
+  // Gaussian-like profile: full intensity at the centre, soft glow at the edge
+  float intensity = exp(-d * d * 14.0);
+  // Additive blending multiplies colour by alpha, so alpha carries the profile
+  gl_FragColor = vec4(vColor * vBrightness, intensity);
 }
 `
 
@@ -115,6 +119,7 @@ export class StarField {
         uLST: { value: 0 },
         uLat: { value: 0.623 }, // ~35.7 deg (Tokyo)
         uFovScale: { value: 1.5 },
+        uPixelRatio: { value: 1 },
       },
       transparent: true,
       depthWrite: false,
@@ -131,6 +136,10 @@ export class StarField {
     this.material.uniforms.uLST.value = lst
     this.material.uniforms.uLat.value = latRad
     this.material.uniforms.uFovScale.value = fovScale
+  }
+
+  setPixelRatio(ratio: number) {
+    this.material.uniforms.uPixelRatio.value = ratio
   }
 
   getStars(): HygStar[] {

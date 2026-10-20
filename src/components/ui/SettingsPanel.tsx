@@ -10,6 +10,7 @@ const TOGGLES: { key: DisplayToggle; label: string }[] = [
   { key: 'showStarNames', label: '星の名前' },
   { key: 'showAtmosphere', label: '大気効果' },
   { key: 'showEquatorialGrid', label: '赤道グリッド' },
+  { key: 'showAltazGrid', label: '地平グリッド' },
 ]
 
 export default function SettingsPanel() {

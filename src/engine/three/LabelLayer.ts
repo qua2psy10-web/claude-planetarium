@@ -12,6 +12,11 @@ const PLANET_STYLE = { font: `bold 14px ${FONT_FAMILY}`, color: '#ffd54a' }
 const STAR_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffe9a8' }
 const CONSTELLATION_STYLE = { font: `13px ${FONT_FAMILY}`, color: '#9fd0ff' }
 const GRID_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#7fe0c0' }
+const ALTAZ_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#f0b878' }
+const CARDINAL_STYLE = { font: `bold 15px ${FONT_FAMILY}`, color: '#ffb347' }
+
+// Indexed by azimuth / 90 degrees.
+const CARDINALS = ['北', '東', '南', '西']
 
 // Japanese names for the best-known stars; others fall back to the IAU name.
 const STAR_NAMES_JA: Record<string, string> = {
@@ -55,6 +60,7 @@ export class LabelLayer {
   private showConstellations = false
   private showPlanets = false
   private showGrid = false
+  private showAltaz = false
 
   private width = 0
   private height = 0
@@ -116,12 +122,17 @@ export class LabelLayer {
     this.showGrid = show
   }
 
+  setAltazVisible(show: boolean) {
+    this.showAltaz = show
+  }
+
   /** Call after the WebGL frame has rendered so the camera matrices are current. */
   draw() {
     const { ctx } = this
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
-    if (!this.showStars && !this.showConstellations && !this.showPlanets && !this.showGrid) return
+    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz
+    if (!any) return
 
     ctx.textBaseline = 'middle'
     ctx.lineJoin = 'round'
@@ -161,6 +172,7 @@ export class LabelLayer {
       }
     }
 
+    if (this.showAltaz) this.altazLabels(placed)
     if (this.showGrid) this.gridLabels(placed)
   }
 
@@ -174,9 +186,7 @@ export class LabelLayer {
     const { latRad, lst } = this
 
     // View centre as RA/Dec: camera direction -> alt/az -> hour angle/dec.
-    this.camera.getWorldDirection(this.v)
-    const alt = Math.asin(Math.max(-1, Math.min(1, this.v.y)))
-    const az = Math.atan2(this.v.x, -this.v.z) // from north, towards east
+    const { alt, az } = this.viewDirection()
     const sinDec = Math.sin(latRad) * Math.sin(alt) + Math.cos(latRad) * Math.cos(alt) * Math.cos(az)
     const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)))
     const cosDec = Math.max(Math.cos(dec), 1e-6)
@@ -200,6 +210,38 @@ export class LabelLayer {
       at(meridian, d * DEG, `${sign}${Math.abs(d)}°`)
     }
     for (let h = 0; h < 24; h++) at(h * step, circleDec, `${h}h`)
+  }
+
+  /** Where the camera is looking: altitude, and azimuth from north towards east (radians). */
+  private viewDirection(): { alt: number; az: number } {
+    this.camera.getWorldDirection(this.v)
+    return {
+      alt: Math.asin(Math.max(-1, Math.min(1, this.v.y))),
+      az: Math.atan2(this.v.x, -this.v.z),
+    }
+  }
+
+  /**
+   * Labels for the alt/az grid: cardinal directions on the horizon, plus tick
+   * labels on the azimuth line and altitude circle nearest the view centre.
+   */
+  private altazLabels(placed: Rect[]) {
+    const { alt, az } = this.viewDirection()
+    const azNear = Math.round((((az / DEG) % 360) + 360) % 360 / 15) * 15
+    const altNear = Math.max(0, Math.min(75, Math.round(alt / DEG / 15) * 15))
+
+    const at = (altDeg: number, azDeg: number, text: string, style: { font: string; color: string }) => {
+      const pt = this.project(altDeg * DEG, azDeg * DEG)
+      if (pt) this.label(placed, text, pt.x, pt.y, 'center', style)
+    }
+
+    // Marks just above the horizon so you can always tell which way you face.
+    CARDINALS.forEach((name, i) => at(3, i * 90, name, CARDINAL_STYLE))
+
+    for (let a = 15; a <= 75; a += 15) at(a, azNear, `${a}°`, ALTAZ_STYLE)
+    for (let d = 0; d < 360; d += 15) {
+      if (d % 90 !== 0) at(altNear, d, `${d}°`, ALTAZ_STYLE)
+    }
   }
 
   dispose() {

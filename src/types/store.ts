@@ -19,6 +19,7 @@ export type DisplayToggle =
   | 'showPlanetLabels'
   | 'showEquatorialGrid'
   | 'showAltazGrid'
+  | 'showMeteors'
   | 'showAtmosphere'
   | 'showStarNames'
 
@@ -41,6 +42,7 @@ export interface PlanetariumState {
   showPlanetLabels: boolean
   showEquatorialGrid: boolean
   showAltazGrid: boolean
+  showMeteors: boolean
   showAtmosphere: boolean
   showStarNames: boolean
 

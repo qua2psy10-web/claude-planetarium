@@ -9,6 +9,7 @@ import { PickingManager } from './PickingManager'
 import { LabelLayer } from './LabelLayer'
 import { EquatorialGrid } from './EquatorialGrid'
 import { AltazGrid } from './AltazGrid'
+import { MeteorLayer } from './MeteorLayer'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
@@ -26,6 +27,7 @@ export class SceneManager {
   private labels: LabelLayer
   private equatorialGrid: EquatorialGrid
   private altazGrid: AltazGrid
+  private meteors: MeteorLayer
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -67,6 +69,7 @@ export class SceneManager {
     this.scene.add(this.horizonMask.mesh)
 
     this.cameraController = new CameraController(this.camera, canvas)
+    this.meteors = new MeteorLayer(canvas, this.camera)
     this.labels = new LabelLayer(canvas, this.camera)
 
     window.addEventListener('resize', this.onResize)
@@ -99,6 +102,7 @@ export class SceneManager {
     this.equatorialGrid.updateUniforms(lst, latRad)
     this.cameraController.updateFov(fov)
     this.labels.setView(lst, latRad, fov)
+    this.meteors.setView(lst, latRad)
   }
 
   updatePlanets(planets: PlanetData[], showLabels: boolean) {
@@ -122,6 +126,11 @@ export class SceneManager {
   setEquatorialGridVisible(v: boolean) {
     this.equatorialGrid.setVisible(v)
     this.labels.setGridVisible(v)
+  }
+
+  /** Shooting stars on/off; `date` is the simulated time, which decides which showers are active. */
+  setMeteors(enabled: boolean, date: Date) {
+    this.meteors.setState(enabled, date)
   }
 
   setAltazGridVisible(v: boolean) {
@@ -155,6 +164,8 @@ export class SceneManager {
       this.rafId = requestAnimationFrame(loop)
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
+      this.meteors.draw(performance.now())
+      this.labels.setRadiants(this.meteors.markedRadiants())
       this.labels.draw()
     }
     this.rafId = requestAnimationFrame(loop)
@@ -171,12 +182,14 @@ export class SceneManager {
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(w, h)
     this.labels.resize()
+    this.meteors.resize()
   }
 
   dispose() {
     this.stopRenderLoop()
     this.cameraController.dispose()
     this.labels.dispose()
+    this.meteors.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

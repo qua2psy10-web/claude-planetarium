@@ -11,6 +11,7 @@ const FONT_FAMILY = "'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','No
 const PLANET_STYLE = { font: `bold 14px ${FONT_FAMILY}`, color: '#ffd54a' }
 const STAR_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffe9a8' }
 const CONSTELLATION_STYLE = { font: `13px ${FONT_FAMILY}`, color: '#9fd0ff' }
+const RADIANT_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffae6b' }
 const GRID_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#7fe0c0' }
 const ALTAZ_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#f0b878' }
 const CARDINAL_STYLE = { font: `bold 15px ${FONT_FAMILY}`, color: '#ffb347' }
@@ -53,6 +54,7 @@ export class LabelLayer {
   private namedStars: HygStar[] = []
   private constellations: ConstellationMeta[] = []
   private planets: PlanetData[] = []
+  private radiants: { text: string; dir: [number, number, number] }[] = []
   private lst = 0
   private latRad = 0
   private fov = 75
@@ -109,6 +111,11 @@ export class LabelLayer {
     this.showPlanets = show
   }
 
+  /** Meteor shower radiants to name, as unit vectors in scene (horizontal) coordinates. */
+  setRadiants(radiants: { text: string; dir: [number, number, number] }[]) {
+    this.radiants = radiants
+  }
+
   setView(lst: number, latRad: number, fov: number) {
     this.lst = lst
     this.latRad = latRad
@@ -134,7 +141,7 @@ export class LabelLayer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
     this.constellationHits = []
-    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz
+    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0
     if (!any) return
 
     ctx.textBaseline = 'middle'
@@ -152,6 +159,14 @@ export class LabelLayer {
         const pt = this.project(degToRad(p.altitude), degToRad(p.azimuth))
         if (pt) this.label(placed, p.nameJa || p.name, pt.x, pt.y + 18, 'center', PLANET_STYLE)
       }
+    }
+
+    // A shower's radiant is the point of the whole display while it is active: name it before stars.
+    for (const r of this.radiants) {
+      const altitude = Math.asin(Math.max(-1, Math.min(1, r.dir[1])))
+      const azimuth = Math.atan2(r.dir[0], -r.dir[2])
+      const pt = this.project(altitude, azimuth)
+      if (pt) this.label(placed, r.text, pt.x, pt.y + 18, 'center', RADIANT_STYLE)
     }
 
     if (this.showStars) {

@@ -41,6 +41,9 @@ export class PlanetLayer {
     }
 
     for (const planet of planets) {
+      // The Moon is drawn with its phase by MoonLayer instead.
+      if (planet.name === 'Moon') continue
+
       if (planet.altitude < -2) {
         const s = this.sprites.get(planet.name)
         if (s) s.visible = false

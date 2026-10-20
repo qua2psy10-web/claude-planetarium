@@ -4,7 +4,7 @@ import { loadStars } from '@/engine/data/starLoader'
 import { loadConstellationLines } from '@/engine/data/constellationLoader'
 import { getPlanetPositions } from '@/engine/astronomy/planets'
 import { computeLST } from '@/engine/astronomy/time'
-import { degToRad } from '@/engine/astronomy/coordinates'
+import { degToRad, radToDeg, equatorialToHorizontal } from '@/engine/astronomy/coordinates'
 import { buildSearchIndex } from '@/engine/data/searchIndex'
 import { loadConstellationMeta } from '@/engine/data/constellationLoader'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
@@ -88,8 +88,13 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
   }, [store.fov, store.latitude, store.longitude, store.simulatedTime])
 
   // Handle click → picking
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null)
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
+      // A drag (panning the view) also ends in a click; don't treat it as a selection.
+      const down = pointerDownRef.current
+      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return
+
       const s = storeRef.current
       const lst = computeLST(s.simulatedTime, s.longitude)
       const result = sceneRef.current?.pick(e.clientX, e.clientY, lst, degToRad(s.latitude), planetsRef.current)
@@ -100,7 +105,19 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
           s.selectObject({ type: 'planet', planet: result.planet, altitude: result.altitude, azimuth: result.azimuth })
         }
       } else {
-        s.selectObject(null)
+        // No star or planet under the pointer: maybe a constellation name label.
+        const c = sceneRef.current?.pickConstellation(e.clientX, e.clientY)
+        if (c) {
+          const hor = equatorialToHorizontal(c.centroidRa, c.centroidDec, lst, degToRad(s.latitude))
+          s.selectObject({
+            type: 'constellation',
+            constellation: c,
+            altitude: radToDeg(hor.altitude),
+            azimuth: radToDeg(hor.azimuth),
+          })
+        } else {
+          s.selectObject(null)
+        }
       }
     },
     [],
@@ -119,6 +136,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     <canvas
       ref={canvasRef}
       className="w-full h-full block cursor-grab active:cursor-grabbing"
+      onPointerDown={(e) => { pointerDownRef.current = { x: e.clientX, y: e.clientY } }}
       onClick={handleClick}
       style={{ touchAction: 'none' }}
     />

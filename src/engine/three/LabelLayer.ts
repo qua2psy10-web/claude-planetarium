@@ -57,7 +57,7 @@ export class LabelLayer {
   private constellations: ConstellationMeta[] = []
   private planets: PlanetData[] = []
   private radiants: { text: string; dir: [number, number, number] }[] = []
-  private trailLabels: { text: string; dir: [number, number, number]; color: string }[] = []
+  private trailLabels: { text: string; dir: [number, number, number]; color: string; below?: boolean }[] = []
   private lst = 0
   private latRad = 0
   private fov = 75
@@ -120,7 +120,7 @@ export class LabelLayer {
   }
 
   /** Date labels along the planets' paths, as unit vectors in scene (horizontal) coordinates. */
-  setTrailLabels(labels: { text: string; dir: [number, number, number]; color: string }[]) {
+  setTrailLabels(labels: { text: string; dir: [number, number, number]; color: string; below?: boolean }[]) {
     this.trailLabels = labels
   }
 
@@ -217,7 +217,7 @@ export class LabelLayer {
       const altitude = Math.asin(Math.max(-1, Math.min(1, t.dir[1])))
       const azimuth = Math.atan2(t.dir[0], -t.dir[2])
       const pt = this.project(altitude, azimuth)
-      if (pt) this.label(placed, t.text, pt.x, pt.y - 11, 'center', { font: TRAIL_FONT, color: t.color })
+      if (pt) this.label(placed, t.text, pt.x, pt.y + (t.below ? 16 : -11), 'center', { font: TRAIL_FONT, color: t.color })
     }
 
     if (this.showAltaz) this.altazLabels(placed)

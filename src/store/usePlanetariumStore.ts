@@ -24,6 +24,7 @@ const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
   showMeteors: true,
   showPlanetTrails: true,
   showAnalemma: true,
+  showComets: true,
   showAtmosphere: true,
   showStarNames: true,
 

@@ -13,10 +13,12 @@ import { MeteorLayer } from './MeteorLayer'
 import { MoonLayer } from './MoonLayer'
 import { TrailLayer } from './TrailLayer'
 import { AnalemmaLayer } from './AnalemmaLayer'
+import { CometLayer } from './CometLayer'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
 import type { EclipseNow } from '@/engine/astronomy/eclipses'
+import type { CometElements } from '@/engine/astronomy/comets'
 
 export class SceneManager {
   private renderer: THREE.WebGLRenderer
@@ -35,6 +37,7 @@ export class SceneManager {
   private moon: MoonLayer
   private trails: TrailLayer
   private analemma: AnalemmaLayer
+  private comets: CometLayer
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -76,6 +79,7 @@ export class SceneManager {
     this.scene.add(this.horizonMask.mesh)
 
     this.cameraController = new CameraController(this.camera, canvas)
+    this.comets = new CometLayer(canvas, this.camera)
     this.analemma = new AnalemmaLayer(canvas, this.camera)
     this.trails = new TrailLayer(canvas, this.camera)
     this.moon = new MoonLayer(canvas, this.camera)
@@ -115,6 +119,7 @@ export class SceneManager {
     this.meteors.setView(lst, latRad)
     this.moon.setLatitude(latRad)
     this.trails.setView(lst, latRad)
+    this.comets.setView(lst, latRad)
   }
 
   updatePlanets(planets: PlanetData[], showLabels: boolean) {
@@ -150,6 +155,15 @@ export class SceneManager {
   /** The Sun's yearly figure of eight at local mean noon, for the observer at `latDeg`, `lonDeg`. */
   setAnalemma(enabled: boolean, date: Date, latDeg: number, lonDeg: number) {
     this.analemma.setState(enabled, date, latDeg, lonDeg)
+  }
+
+  setCometData(comets: CometElements[]) {
+    this.comets.setData(comets)
+  }
+
+  /** Comets on/off; `date` is the simulated time. */
+  setComets(enabled: boolean, date: Date) {
+    this.comets.setState(enabled, date)
   }
 
   /** Phase angle of the Moon in degrees (0 = full, 180 = new). */
@@ -198,12 +212,13 @@ export class SceneManager {
       this.rafId = requestAnimationFrame(loop)
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
+      this.comets.draw()
       this.analemma.draw()
       this.trails.draw()
       this.moon.draw()
       this.meteors.draw(performance.now())
       this.labels.setRadiants(this.meteors.markedRadiants())
-      this.labels.setTrailLabels([...this.trails.tickLabels(), ...this.analemma.tickLabels()])
+      this.labels.setTrailLabels([...this.trails.tickLabels(), ...this.analemma.tickLabels(), ...this.comets.tickLabels()])
       this.labels.draw()
     }
     this.rafId = requestAnimationFrame(loop)
@@ -224,6 +239,7 @@ export class SceneManager {
     this.moon.resize()
     this.trails.resize()
     this.analemma.resize()
+    this.comets.resize()
   }
 
   dispose() {
@@ -234,6 +250,7 @@ export class SceneManager {
     this.moon.dispose()
     this.trails.dispose()
     this.analemma.dispose()
+    this.comets.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

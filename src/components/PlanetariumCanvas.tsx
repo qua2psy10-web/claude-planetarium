@@ -8,6 +8,7 @@ import { getMoonPhaseAngle } from '@/engine/astronomy/moonPhase'
 import { eclipseNow } from '@/engine/astronomy/eclipses'
 import { degToRad, radToDeg, equatorialToHorizontal } from '@/engine/astronomy/coordinates'
 import { buildSearchIndex } from '@/engine/data/searchIndex'
+import { loadComets } from '@/engine/data/cometLoader'
 import { loadConstellationMeta } from '@/engine/data/constellationLoader'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import type { PlanetData } from '@/types/planet'
@@ -59,6 +60,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     sceneRef.current?.setMeteors(s.showMeteors, simTime)
     sceneRef.current?.setPlanetTrails(s.showPlanetTrails, simTime)
     sceneRef.current?.setAnalemma(s.showAnalemma, simTime, s.latitude, s.longitude)
+    sceneRef.current?.setComets(s.showComets, simTime)
     sceneRef.current?.setAtmosphere(s.showAtmosphere)
   }, [])
 
@@ -73,6 +75,8 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
       ([stars, lines, meta]) => {
         scene.loadStarData(stars, lines)
         scene.setConstellationMeta(meta)
+        // Comets load on their own: the planetarium works without them.
+        loadComets().then((comets) => scene.setCometData(comets)).catch(() => {})
         buildSearchIndex(stars, meta)
         lastFrameRef.current = Date.now()
         scene.setFrameCallback(onFrame)

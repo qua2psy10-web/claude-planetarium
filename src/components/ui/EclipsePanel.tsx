@@ -49,7 +49,7 @@ export default function EclipsePanel() {
       </button>
 
       {open && (
-        <div className="absolute top-12 right-0 w-80 max-h-[calc(100vh-7rem)] overflow-y-auto bg-black/85 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
+        <div data-no-labels className="absolute top-12 right-0 w-80 max-h-[calc(100vh-7rem)] overflow-y-auto bg-black/85 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
           <button onClick={() => setOpen(false)} className="absolute top-3 right-3 text-white/40 hover:text-white">
             <X size={14} />
           </button>

@@ -12,6 +12,7 @@ import { AltazGrid } from './AltazGrid'
 import { MeteorLayer } from './MeteorLayer'
 import { MoonLayer } from './MoonLayer'
 import { TrailLayer } from './TrailLayer'
+import { AnalemmaLayer } from './AnalemmaLayer'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
@@ -32,6 +33,7 @@ export class SceneManager {
   private meteors: MeteorLayer
   private moon: MoonLayer
   private trails: TrailLayer
+  private analemma: AnalemmaLayer
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -73,6 +75,7 @@ export class SceneManager {
     this.scene.add(this.horizonMask.mesh)
 
     this.cameraController = new CameraController(this.camera, canvas)
+    this.analemma = new AnalemmaLayer(canvas, this.camera)
     this.trails = new TrailLayer(canvas, this.camera)
     this.moon = new MoonLayer(canvas, this.camera)
     this.meteors = new MeteorLayer(canvas, this.camera)
@@ -143,6 +146,11 @@ export class SceneManager {
     this.trails.setState(enabled, date)
   }
 
+  /** The Sun's yearly figure of eight at local mean noon, for the observer at `latDeg`, `lonDeg`. */
+  setAnalemma(enabled: boolean, date: Date, latDeg: number, lonDeg: number) {
+    this.analemma.setState(enabled, date, latDeg, lonDeg)
+  }
+
   /** Phase angle of the Moon in degrees (0 = full, 180 = new). */
   setMoonPhase(phaseAngleDeg: number) {
     this.moon.setPhaseAngle(phaseAngleDeg)
@@ -184,11 +192,12 @@ export class SceneManager {
       this.rafId = requestAnimationFrame(loop)
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
+      this.analemma.draw()
       this.trails.draw()
       this.moon.draw()
       this.meteors.draw(performance.now())
       this.labels.setRadiants(this.meteors.markedRadiants())
-      this.labels.setTrailLabels(this.trails.tickLabels())
+      this.labels.setTrailLabels([...this.trails.tickLabels(), ...this.analemma.tickLabels()])
       this.labels.draw()
     }
     this.rafId = requestAnimationFrame(loop)
@@ -208,6 +217,7 @@ export class SceneManager {
     this.meteors.resize()
     this.moon.resize()
     this.trails.resize()
+    this.analemma.resize()
   }
 
   dispose() {
@@ -217,6 +227,7 @@ export class SceneManager {
     this.meteors.dispose()
     this.moon.dispose()
     this.trails.dispose()
+    this.analemma.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

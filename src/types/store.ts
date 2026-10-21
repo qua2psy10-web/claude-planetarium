@@ -21,6 +21,7 @@ export type DisplayToggle =
   | 'showAltazGrid'
   | 'showMeteors'
   | 'showPlanetTrails'
+  | 'showAnalemma'
   | 'showAtmosphere'
   | 'showStarNames'
 
@@ -45,6 +46,7 @@ export interface PlanetariumState {
   showAltazGrid: boolean
   showMeteors: boolean
   showPlanetTrails: boolean
+  showAnalemma: boolean
   showAtmosphere: boolean
   showStarNames: boolean
 

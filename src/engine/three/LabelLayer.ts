@@ -13,6 +13,7 @@ const PLANET_STYLE = { font: `bold 14px ${FONT_FAMILY}`, color: '#ffd54a' }
 const STAR_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffe9a8' }
 const CONSTELLATION_STYLE = { font: `13px ${FONT_FAMILY}`, color: '#9fd0ff' }
 const RADIANT_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffae6b' }
+const TRAIL_FONT = `10px ${FONT_FAMILY}`
 const GRID_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#7fe0c0' }
 const ALTAZ_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#f0b878' }
 const CARDINAL_STYLE = { font: `bold 15px ${FONT_FAMILY}`, color: '#ffb347' }
@@ -56,6 +57,7 @@ export class LabelLayer {
   private constellations: ConstellationMeta[] = []
   private planets: PlanetData[] = []
   private radiants: { text: string; dir: [number, number, number] }[] = []
+  private trailLabels: { text: string; dir: [number, number, number]; color: string }[] = []
   private lst = 0
   private latRad = 0
   private fov = 75
@@ -117,6 +119,11 @@ export class LabelLayer {
     this.radiants = radiants
   }
 
+  /** Date labels along the planets' paths, as unit vectors in scene (horizontal) coordinates. */
+  setTrailLabels(labels: { text: string; dir: [number, number, number]; color: string }[]) {
+    this.trailLabels = labels
+  }
+
   setView(lst: number, latRad: number, fov: number) {
     this.lst = lst
     this.latRad = latRad
@@ -142,7 +149,7 @@ export class LabelLayer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
     this.constellationHits = []
-    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0
+    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0 || this.trailLabels.length > 0
     if (!any) return
 
     ctx.textBaseline = 'middle'
@@ -203,6 +210,14 @@ export class LabelLayer {
         const rect = this.label(placed, c.nameJa, pt.x, pt.y, 'center', CONSTELLATION_STYLE)
         if (rect) this.constellationHits.push({ rect, meta: c })
       }
+    }
+
+    // Path dates matter least, so they get whatever room is left.
+    for (const t of this.trailLabels) {
+      const altitude = Math.asin(Math.max(-1, Math.min(1, t.dir[1])))
+      const azimuth = Math.atan2(t.dir[0], -t.dir[2])
+      const pt = this.project(altitude, azimuth)
+      if (pt) this.label(placed, t.text, pt.x, pt.y - 11, 'center', { font: TRAIL_FONT, color: t.color })
     }
 
     if (this.showAltaz) this.altazLabels(placed)

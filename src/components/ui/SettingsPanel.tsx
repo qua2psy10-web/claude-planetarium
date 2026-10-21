@@ -12,6 +12,7 @@ const TOGGLES: { key: DisplayToggle; label: string }[] = [
   { key: 'showEquatorialGrid', label: '赤道グリッド' },
   { key: 'showAltazGrid', label: '地平グリッド' },
   { key: 'showMeteors', label: '流れ星' },
+  { key: 'showPlanetTrails', label: '惑星の軌跡' },
 ]
 
 export default function SettingsPanel() {

@@ -54,6 +54,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     sceneRef.current?.setEquatorialGridVisible(s.showEquatorialGrid)
     sceneRef.current?.setAltazGridVisible(s.showAltazGrid)
     sceneRef.current?.setMeteors(s.showMeteors, simTime)
+    sceneRef.current?.setPlanetTrails(s.showPlanetTrails, simTime)
     sceneRef.current?.setAtmosphere(s.showAtmosphere)
   }, [])
 

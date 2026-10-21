@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
 import { moveAlong, tangentAwayFrom, type Vec3 } from '@/engine/astronomy/meteors'
 import { moonDiskRadiusPx } from '@/engine/astronomy/moonPhase'
+import type { EclipseNow, LunarGeometry, SolarGeometry } from '@/engine/astronomy/eclipses'
 import type { PlanetData } from '@/types/planet'
 
 // Dark maria on the Moon's face, as seen by the naked eye from the northern hemisphere with
@@ -34,6 +35,7 @@ export class MoonLayer {
 
   private planets: PlanetData[] = []
   private phaseAngle = 180 // degrees; 0 = full, 180 = new
+  private eclipse: EclipseNow = { solar: null, lunar: null }
   private latRad = 0
 
   private width = 0
@@ -80,6 +82,11 @@ export class MoonLayer {
     this.phaseAngle = deg
   }
 
+  /** Eclipse geometry for this moment, if the Moon is near enough to the Sun or the Earth's shadow. */
+  setEclipse(eclipse: EclipseNow) {
+    this.eclipse = eclipse
+  }
+
   /** Call after the WebGL frame has rendered so the camera matrices are current. */
   draw() {
     const { ctx } = this
@@ -101,7 +108,13 @@ export class MoonLayer {
     const northPole = horizontalToCartesian(this.latRad, 0, 1) as Vec3
     const northAngle = this.screenAngleToward(m, centre, northPole) ?? -Math.PI / 2
 
-    this.drawMoon(centre.x, centre.y, radius, sunAngle ?? 0, northAngle)
+    // A solar eclipse is drawn as its own picture: the Sun with the Moon crossing it.
+    const { solar, lunar } = this.eclipse
+    if (solar && sun && sun.altitude >= 0) {
+      this.drawSolarEclipse(sun, solar, sunAngle ?? 0)
+      return
+    }
+    this.drawMoon(centre.x, centre.y, radius, sunAngle ?? 0, northAngle, lunar)
   }
 
   dispose() {
@@ -132,17 +145,19 @@ export class MoonLayer {
     return Math.atan2(next.y - moonScreen.y, next.x - moonScreen.x)
   }
 
-  private drawMoon(x: number, y: number, r: number, sunAngle: number, northAngle: number) {
+  private drawMoon(x: number, y: number, r: number, sunAngle: number, northAngle: number, lunar: LunarGeometry | null) {
     const { ctx } = this
     const phase = degToRad(this.phaseAngle)
     const lit = (1 + Math.cos(phase)) / 2 // lit fraction of the disk
+    // How far into the Earth's umbra the Moon is, 0 to 1: it takes the glow out of the halo.
+    const shade = lunar ? Math.max(0, Math.min(1, lunar.umbralMagnitude)) : 0
 
     ctx.save()
     ctx.translate(x, y)
 
     // Halo, stronger the fuller the Moon is.
     const halo = ctx.createRadialGradient(0, 0, r * 0.9, 0, 0, r * 2.6)
-    halo.addColorStop(0, `rgba(230, 235, 255, ${0.16 * lit})`)
+    halo.addColorStop(0, `rgba(230, 235, 255, ${0.16 * lit * (1 - 0.9 * shade)})`)
     halo.addColorStop(1, 'rgba(230, 235, 255, 0)')
     ctx.fillStyle = halo
     ctx.beginPath()
@@ -189,6 +204,95 @@ export class MoonLayer {
       ctx.fill()
     }
 
+    // A lunar eclipse: the Earth's shadow lies over the face. Everything is in units of the Moon's
+    // own radius, so the enlarged disk keeps the true geometry.
+    if (lunar && lunar.penumbralMagnitude > 0) {
+      ctx.rotate(-(northAngle + Math.PI / 2)) // back to screen axes
+      const perDeg = r / lunar.moonRadiusDeg
+      const away = sunAngle + Math.PI // the shadow's centre lies on the far side from the Sun
+      const cx = Math.cos(away) * lunar.separationDeg * perDeg
+      const cy = Math.sin(away) * lunar.separationDeg * perDeg
+      const umbra = lunar.umbraRadiusDeg * perDeg
+      const penumbra = lunar.penumbraRadiusDeg * perDeg
+
+      const soft = ctx.createRadialGradient(cx, cy, umbra * 0.9, cx, cy, penumbra)
+      soft.addColorStop(0, 'rgba(45, 22, 12, 0.5)')
+      soft.addColorStop(1, 'rgba(45, 22, 12, 0)')
+      ctx.fillStyle = soft
+      ctx.beginPath()
+      ctx.arc(cx, cy, penumbra, 0, Math.PI * 2)
+      ctx.fill()
+
+      const dark = ctx.createRadialGradient(cx, cy, 0, cx, cy, umbra)
+      dark.addColorStop(0, 'rgba(105, 24, 10, 0.93)')
+      dark.addColorStop(0.9, 'rgba(105, 24, 10, 0.93)')
+      dark.addColorStop(1, 'rgba(125, 36, 16, 0.7)')
+      ctx.fillStyle = dark
+      ctx.beginPath()
+      ctx.arc(cx, cy, umbra, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    ctx.restore()
+  }
+
+  /**
+   * The Sun with the Moon in front of it. At a wide view both are far smaller than a few pixels, so
+   * the picture is magnified the same way for both: sizes and the distance between them are scaled
+   * together, which keeps the true overlap. The Moon eases onto this scale as it nears the Sun.
+   */
+  private drawSolarEclipse(sun: PlanetData, g: SolarGeometry, towardSun: number) {
+    const { ctx } = this
+    const s = this.project(this.direction(sun))
+    if (!s) return
+
+    const perDeg = (this.height / 2 / Math.tan((this.camera.fov * Math.PI) / 360)) * (Math.PI / 180)
+    const realSun = g.sunRadiusDeg * perDeg
+    const scale = Math.max(1, moonDiskRadiusPx(this.camera.fov, this.height) / realSun)
+    const sunR = realSun * scale
+    const moonR = g.moonRadiusDeg * perDeg * scale
+
+    const t = Math.max(0, Math.min(1, (2.0 - g.separationDeg) / (2.0 - 0.7)))
+    const ease = t * t * (3 - 2 * t)
+    const offset = g.separationDeg * perDeg * (1 + (scale - 1) * ease)
+    const away = towardSun + Math.PI // from the Sun, the Moon lies the opposite way to the Sun from the Moon
+    const mx = s.x + Math.cos(away) * offset
+    const my = s.y + Math.sin(away) * offset
+
+    ctx.save()
+    // The corona, which can be seen only when the Sun is entirely covered.
+    if (g.obscuration > 0.995) {
+      const corona = ctx.createRadialGradient(s.x, s.y, sunR * 0.95, s.x, s.y, sunR * 4)
+      corona.addColorStop(0, 'rgba(255, 248, 230, 0.75)')
+      corona.addColorStop(0.35, 'rgba(210, 225, 255, 0.28)')
+      corona.addColorStop(1, 'rgba(210, 225, 255, 0)')
+      ctx.fillStyle = corona
+      ctx.beginPath()
+      ctx.arc(s.x, s.y, sunR * 4, 0, Math.PI * 2)
+      ctx.fill()
+    }
+
+    const glow = ctx.createRadialGradient(s.x, s.y, sunR * 0.9, s.x, s.y, sunR * 2.2)
+    glow.addColorStop(0, 'rgba(255, 220, 120, 0.4)')
+    glow.addColorStop(1, 'rgba(255, 220, 120, 0)')
+    ctx.fillStyle = glow
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, sunR * 2.2, 0, Math.PI * 2)
+    ctx.fill()
+
+    const disc = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, sunR)
+    disc.addColorStop(0, '#fffdf0')
+    disc.addColorStop(1, '#ffdf80')
+    ctx.fillStyle = disc
+    ctx.beginPath()
+    ctx.arc(s.x, s.y, sunR, 0, Math.PI * 2)
+    ctx.fill()
+
+    // The Moon: its dark side towards us (the Moon is new).
+    ctx.fillStyle = 'rgb(10, 12, 18)'
+    ctx.beginPath()
+    ctx.arc(mx, my, moonR, 0, Math.PI * 2)
+    ctx.fill()
     ctx.restore()
   }
 }

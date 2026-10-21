@@ -5,6 +5,7 @@ import TimeControls from './components/ui/TimeControls'
 import InfoPanel from './components/ui/InfoPanel'
 import LocationPanel from './components/ui/LocationPanel'
 import SettingsPanel from './components/ui/SettingsPanel'
+import EclipsePanel from './components/ui/EclipsePanel'
 import StatusBar from './components/ui/StatusBar'
 import CompassRose from './components/ui/CompassRose'
 
@@ -30,6 +31,7 @@ export default function App() {
           <SearchBar />
           <LocationPanel />
           <SettingsPanel />
+          <EclipsePanel />
           <InfoPanel />
           <TimeControls />
           <StatusBar />

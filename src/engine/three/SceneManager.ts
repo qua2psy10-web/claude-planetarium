@@ -16,6 +16,7 @@ import { AnalemmaLayer } from './AnalemmaLayer'
 import type { HygStar } from '@/types/star'
 import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
+import type { EclipseNow } from '@/engine/astronomy/eclipses'
 
 export class SceneManager {
   private renderer: THREE.WebGLRenderer
@@ -154,6 +155,11 @@ export class SceneManager {
   /** Phase angle of the Moon in degrees (0 = full, 180 = new). */
   setMoonPhase(phaseAngleDeg: number) {
     this.moon.setPhaseAngle(phaseAngleDeg)
+  }
+
+  /** Eclipse geometry for this moment (empty when no eclipse is near). */
+  setEclipse(eclipse: EclipseNow) {
+    this.moon.setEclipse(eclipse)
   }
 
   /** Shooting stars on/off; `date` is the simulated time, which decides which showers are active. */

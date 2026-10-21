@@ -5,6 +5,7 @@ import { loadConstellationLines } from '@/engine/data/constellationLoader'
 import { getPlanetPositions } from '@/engine/astronomy/planets'
 import { computeLST } from '@/engine/astronomy/time'
 import { getMoonPhaseAngle } from '@/engine/astronomy/moonPhase'
+import { eclipseNow } from '@/engine/astronomy/eclipses'
 import { degToRad, radToDeg, equatorialToHorizontal } from '@/engine/astronomy/coordinates'
 import { buildSearchIndex } from '@/engine/data/searchIndex'
 import { loadConstellationMeta } from '@/engine/data/constellationLoader'
@@ -48,7 +49,9 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     const planets = getPlanetPositions(simTime, s.latitude, s.longitude)
     planetsRef.current = planets
     sceneRef.current?.updatePlanets(planets, s.showPlanetLabels)
-    sceneRef.current?.setMoonPhase(getMoonPhaseAngle(simTime))
+    const phaseAngle = getMoonPhaseAngle(simTime)
+    sceneRef.current?.setMoonPhase(phaseAngle)
+    sceneRef.current?.setEclipse(eclipseNow(simTime, s.latitude, s.longitude, phaseAngle))
     sceneRef.current?.setConstellationLinesVisible(s.showConstellationLines)
     sceneRef.current?.setLabelVisibility(s.showConstellationNames, s.showStarNames)
     sceneRef.current?.setEquatorialGridVisible(s.showEquatorialGrid)

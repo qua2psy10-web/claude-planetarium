@@ -59,6 +59,7 @@ export class SceneManager {
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
   private frameCallback: (() => void) | null = null
+  private captureRequest: { caption: string[]; resolve: (blob: Blob | null) => void } | null = null
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas
@@ -273,6 +274,72 @@ export class SceneManager {
     return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, this.dso.visibleObjects(), lst, latRad, this.precession, this.limitMag)
   }
 
+  /**
+   * A PNG of the next frame: the WebGL canvas with every 2D layer on top, in their stacking order,
+   * and the caption at the bottom left. Layers are copied right after they are drawn, in the same
+   * task, which is why the WebGL buffer is still readable without preserving it.
+   */
+  captureImage(caption: string[]): Promise<Blob | null> {
+    return new Promise((resolve) => {
+      this.captureRequest = { caption, resolve }
+      // A hidden tab does not run animation frames; do not wait for one forever.
+      setTimeout(() => {
+        if (this.captureRequest?.resolve === resolve) {
+          this.captureRequest = null
+          resolve(null)
+        }
+      }, 3000)
+    })
+  }
+
+  /** Where the caption sits (CSS px), so the labels in a picture stay off it. */
+  private captionRect(caption: string[]) {
+    if (caption.length === 0) return []
+    const width = Math.max(...caption.map((l) => l.length)) * 8.5 + 24
+    return [{ x0: 0, y0: this.canvas.clientHeight - caption.length * 19 - 28, x1: width, y1: this.canvas.clientHeight }]
+  }
+
+  private composeCapture(labels: HTMLCanvasElement) {
+    const request = this.captureRequest
+    if (!request) return
+    this.captureRequest = null
+
+    const w = this.canvas.width
+    const h = this.canvas.height
+    const out = document.createElement('canvas')
+    out.width = w
+    out.height = h
+    const ctx = out.getContext('2d')
+    if (!ctx) return request.resolve(null)
+
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, w, h)
+    ctx.drawImage(this.canvas, 0, 0)
+    const layers = Array.from(this.canvas.parentElement?.querySelectorAll('canvas') ?? [])
+      .filter((c): c is HTMLCanvasElement => c !== this.canvas && c !== this.labels.element)
+      .sort((a, b) => Number(a.style.zIndex || 0) - Number(b.style.zIndex || 0))
+    for (const layer of layers) ctx.drawImage(layer, 0, 0, w, h)
+    ctx.drawImage(labels, 0, 0, w, h) // names go on top of everything
+
+    if (request.caption.length > 0) {
+      const scale = w / (this.canvas.clientWidth || w)
+      const size = Math.round(13 * scale)
+      const margin = Math.round(16 * scale)
+      ctx.font = `${size}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`
+      ctx.textBaseline = 'alphabetic'
+      ctx.lineJoin = 'round'
+      ctx.lineWidth = Math.max(2, Math.round(3 * scale))
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)'
+      ctx.fillStyle = 'rgba(253, 224, 71, 0.95)'
+      request.caption.forEach((line, i) => {
+        const y = h - margin - (request.caption.length - 1 - i) * Math.round(size * 1.45)
+        ctx.strokeText(line, margin, y)
+        ctx.fillText(line, margin, y)
+      })
+    }
+    out.toBlob((blob) => request.resolve(blob), 'image/png')
+  }
+
   setFrameCallback(fn: () => void) {
     this.frameCallback = fn
   }
@@ -293,7 +360,11 @@ export class SceneManager {
       this.meteors.draw(performance.now())
       this.labels.setRadiants(this.meteors.markedRadiants())
       this.labels.setTrailLabels([...this.trails.tickLabels(), ...this.analemma.tickLabels(), ...this.comets.tickLabels()])
+      // A picture wants the labels without the panels' keep-out zones, so they get their own pass,
+      // before the normal one that the screen (and click targets) use.
+      const labelsForCapture = this.captureRequest ? this.labels.renderForCapture(this.captionRect(this.captureRequest.caption)) : null
       this.labels.draw()
+      if (labelsForCapture) this.composeCapture(labelsForCapture)
     }
     this.rafId = requestAnimationFrame(loop)
   }

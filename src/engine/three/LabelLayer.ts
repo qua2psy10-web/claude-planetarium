@@ -52,6 +52,9 @@ interface Rect { x0: number; y0: number; x1: number; y1: number }
  */
 export class LabelLayer {
   private overlay: HTMLCanvasElement
+  /** While drawing a picture: the panels are not in it, so labels may run under them; `captureAvoid` is what is. */
+  private forCapture = false
+  private captureAvoid: Rect[] = []
   private ctx: CanvasRenderingContext2D
   private host: HTMLCanvasElement
   private camera: THREE.PerspectiveCamera
@@ -362,8 +365,37 @@ export class LabelLayer {
     this.overlay.remove()
   }
 
+  /**
+   * The labels as they should be in a saved picture: on a canvas of their own, ignoring the UI panels
+   * (which will not be in the picture) but keeping clear of `avoid` (CSS px), such as a caption.
+   * Call it before the normal draw of the same frame, which restores the on-screen state and click targets.
+   */
+  renderForCapture(avoid: Rect[]): HTMLCanvasElement {
+    const canvas = document.createElement('canvas')
+    canvas.width = this.overlay.width
+    canvas.height = this.overlay.height
+    const screen = this.ctx
+    this.ctx = canvas.getContext('2d')!
+    this.forCapture = true
+    this.captureAvoid = avoid
+    try {
+      this.draw()
+    } finally {
+      this.ctx = screen
+      this.forCapture = false
+      this.captureAvoid = []
+    }
+    return canvas
+  }
+
+  /** The labels' own canvas on the page. */
+  get element(): HTMLCanvasElement {
+    return this.overlay
+  }
+
   /** Bounding boxes (overlay CSS px) of UI elements that labels must not cover. */
   private uiRects(): Rect[] {
+    if (this.forCapture) return [...this.captureAvoid]
     const origin = this.host.getBoundingClientRect()
     const pad = 6
     const rects: Rect[] = []

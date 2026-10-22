@@ -8,6 +8,7 @@ import SettingsPanel from './components/ui/SettingsPanel'
 import EclipsePanel from './components/ui/EclipsePanel'
 import CometPanel from './components/ui/CometPanel'
 import SatellitePanel from './components/ui/SatellitePanel'
+import SharePanel from './components/ui/SharePanel'
 import StatusBar from './components/ui/StatusBar'
 import CompassRose from './components/ui/CompassRose'
 
@@ -36,6 +37,7 @@ export default function App() {
           <EclipsePanel />
           <CometPanel />
           <SatellitePanel />
+          <SharePanel />
           <InfoPanel />
           <TimeControls />
           <StatusBar />

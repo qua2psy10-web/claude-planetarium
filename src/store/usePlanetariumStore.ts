@@ -2,20 +2,8 @@ import { create } from 'zustand'
 import type { PlanetariumState, SelectedObject, DisplayToggle } from '@/types/store'
 import { computeLST } from '@/engine/astronomy/time'
 
-const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
-  simulatedTime: new Date(),
-  isPlaying: true,
-  playbackSpeed: 1,
-
-  latitude: 35.6895,
-  longitude: 139.6917,
-  locationName: '東京',
-  locationSource: 'manual',
-
-  viewAzimuth: 180,
-  viewAltitude: 45,
-  fov: 75,
-
+/** What each display switch starts as. Share links record only the switches that differ from this. */
+export const DEFAULT_TOGGLES: Record<DisplayToggle, boolean> = {
   showConstellationLines: true,
   showConstellationNames: true,
   showPlanetLabels: true,
@@ -30,6 +18,23 @@ const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
   showMilkyWay: true,
   showDeepSky: true,
   showSatellites: true,
+}
+
+const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
+  simulatedTime: new Date(),
+  isPlaying: true,
+  playbackSpeed: 1,
+
+  latitude: 35.6895,
+  longitude: 139.6917,
+  locationName: '東京',
+  locationSource: 'manual',
+
+  viewAzimuth: 180,
+  viewAltitude: 45,
+  fov: 75,
+
+  ...DEFAULT_TOGGLES,
 
   selectedObject: null,
 

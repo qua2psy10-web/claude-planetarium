@@ -19,6 +19,7 @@ import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/ty
 import type { PlanetData } from '@/types/planet'
 import type { EclipseNow } from '@/engine/astronomy/eclipses'
 import type { CometElements } from '@/engine/astronomy/comets'
+import { precessionMatrix, type Mat3 } from '@/engine/astronomy/precession'
 
 export class SceneManager {
   private renderer: THREE.WebGLRenderer
@@ -27,6 +28,9 @@ export class SceneManager {
   private skyDome: SkyDome
   private starField: StarField | null = null
   private constellationLines: ConstellationLines | null = null
+  /** J2000 -> equinox of date; shared by reference with the star and line shaders. */
+  private precessionUniform = new THREE.Matrix3()
+  private precession: Mat3 = precessionMatrix(new Date())
   private planetLayer: PlanetLayer
   private horizonMask: HorizonMask
   private cameraController: CameraController
@@ -95,21 +99,24 @@ export class SceneManager {
   loadStarData(stars: HygStar[], linesData: ConLinesData) {
     // StarField
     if (this.starField) this.scene.remove(this.starField.points)
-    this.starField = new StarField(stars)
+    this.starField = new StarField(stars, this.precessionUniform)
     this.starField.setPixelRatio(this.renderer.getPixelRatio())
     this.scene.add(this.starField.points)
     this.labels.setStars(stars)
 
     // Constellation lines
     if (this.constellationLines) this.scene.remove(this.constellationLines.lineSegments)
-    this.constellationLines = new ConstellationLines(stars, linesData)
+    this.constellationLines = new ConstellationLines(stars, linesData, this.precessionUniform)
     this.scene.add(this.constellationLines.lineSegments)
 
     // Picking
     this.pickingManager = new PickingManager(this.camera, this.canvas)
   }
 
-  updateUniforms(lst: number, latRad: number, fov: number) {
+  updateUniforms(lst: number, latRad: number, fov: number, date: Date) {
+    this.precession = precessionMatrix(date)
+    this.precessionUniform.set(...this.precession)
+    this.labels.setPrecession(this.precession)
     const fovScale = 75 / fov  // normalize to base FOV of 75
     this.starField?.updateUniforms(lst, latRad, fovScale)
     this.constellationLines?.updateUniforms(lst, latRad)
@@ -200,7 +207,7 @@ export class SceneManager {
 
   pick(clientX: number, clientY: number, lst: number, latRad: number, planets: PlanetData[]) {
     if (!this.pickingManager || !this.starField) return null
-    return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, lst, latRad)
+    return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, lst, latRad, this.precession)
   }
 
   setFrameCallback(fn: () => void) {

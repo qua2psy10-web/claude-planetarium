@@ -3,6 +3,7 @@ import { Search, X } from 'lucide-react'
 import { useSearch } from '@/hooks/useSearch'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import { equatorialToHorizontal, degToRad } from '@/engine/astronomy/coordinates'
+import { precessRaDec, precessionMatrix } from '@/engine/astronomy/precession'
 import { computeLST } from '@/engine/astronomy/time'
 import type { SearchResult } from '@/engine/data/searchIndex'
 
@@ -19,20 +20,18 @@ export default function SearchBar() {
 
     const lst = computeLST(store.simulatedTime, store.longitude)
     const latRad = degToRad(store.latitude)
+    const prec = precessionMatrix(store.simulatedTime)
 
     if (r.type === 'star') {
-      const { altitude, azimuth } = equatorialToHorizontal(r.star.ra, r.star.dec, lst, latRad)
+      const eq = precessRaDec(r.star.ra, r.star.dec, prec)
+      const { altitude, azimuth } = equatorialToHorizontal(eq.ra, eq.dec, lst, latRad)
       const azDeg = (azimuth * 180) / Math.PI
       const altDeg = (altitude * 180) / Math.PI
       store.setViewDirection(azDeg, altDeg)
       store.selectObject({ type: 'star', star: r.star, altitude: altDeg, azimuth: azDeg })
     } else if (r.type === 'constellation') {
-      const { altitude, azimuth } = equatorialToHorizontal(
-        r.constellation.centroidRa,
-        r.constellation.centroidDec,
-        lst,
-        latRad,
-      )
+      const eq = precessRaDec(r.constellation.centroidRa, r.constellation.centroidDec, prec)
+      const { altitude, azimuth } = equatorialToHorizontal(eq.ra, eq.dec, lst, latRad)
       const azDeg = (azimuth * 180) / Math.PI
       const altDeg = (altitude * 180) / Math.PI
       store.setViewDirection(azDeg, Math.max(altDeg, 15))

@@ -1,8 +1,10 @@
 import * as THREE from 'three'
 import type { HygStar } from '@/types/star'
+import { PRECESS_GLSL } from '@/engine/astronomy/precession'
 import type { ConstellationLines as ConLinesData } from '@/types/constellation'
 
 const vertexShader = `
+${PRECESS_GLSL}
 uniform float uLST;
 uniform float uLat;
 
@@ -10,12 +12,15 @@ attribute float aRa;
 attribute float aDec;
 
 void main() {
-  float ha = uLST - aRa;
-  float sinAlt = sin(aDec) * sin(uLat) + cos(aDec) * cos(uLat) * cos(ha);
+  vec2 eq = precess(aRa, aDec);  // J2000 -> equinox of date, as in StarField.ts
+  float ra = eq.x;
+  float dec = eq.y;
+  float ha = uLST - ra;
+  float sinAlt = sin(dec) * sin(uLat) + cos(dec) * cos(uLat) * cos(ha);
   float alt = asin(clamp(sinAlt, -1.0, 1.0));
   // Azimuth from south here; the scene uses azimuth from north (+180 degrees),
   // hence the negated x and z. Keep in sync with StarField.ts.
-  float az = atan(sin(ha), cos(ha) * sin(uLat) - tan(aDec) * cos(uLat));
+  float az = atan(sin(ha), cos(ha) * sin(uLat) - tan(dec) * cos(uLat));
   float cosAlt = cos(alt);
   vec3 pos = vec3(-cosAlt * sin(az), sin(alt), cosAlt * cos(az)) * 98.0;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -32,7 +37,7 @@ export class ConstellationLines {
   lineSegments: THREE.LineSegments
   private material: THREE.ShaderMaterial
 
-  constructor(stars: HygStar[], linesData: ConLinesData) {
+  constructor(stars: HygStar[], linesData: ConLinesData, precession: THREE.Matrix3) {
     const hipMap = new Map<number, HygStar>()
     for (const s of stars) hipMap.set(s.hip, s)
 
@@ -63,6 +68,7 @@ export class ConstellationLines {
       uniforms: {
         uLST: { value: 0 },
         uLat: { value: 0.623 },
+        uPrec: { value: precession },
       },
       transparent: true,
       depthWrite: false,

@@ -29,6 +29,7 @@ export type DisplayToggle =
   | 'showStarNames'
   | 'showMilkyWay'
   | 'showDeepSky'
+  | 'showSatellites'
 
 export interface PlanetariumState {
   simulatedTime: Date
@@ -57,6 +58,7 @@ export interface PlanetariumState {
   showStarNames: boolean
   showMilkyWay: boolean
   showDeepSky: boolean
+  showSatellites: boolean
 
   selectedObject: SelectedObject | null
 

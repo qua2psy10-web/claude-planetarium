@@ -5,6 +5,7 @@ import type { PlanetData } from '@/types/planet'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
 import { precessRaDec, IDENTITY, type Mat3 } from '@/engine/astronomy/precession'
 import type { DsoLabel } from './DsoLayer'
+import type { SatelliteLabel } from './SatelliteLayer'
 import { moonDiskRadiusPx } from '@/engine/astronomy/moonPhase'
 
 const DEG = Math.PI / 180
@@ -13,6 +14,7 @@ const FONT_FAMILY = "'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','No
 
 const PLANET_STYLE = { font: `bold 14px ${FONT_FAMILY}`, color: '#ffd54a' }
 const DSO_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#ffc9a8' }
+const SATELLITE_FONT = `bold 12px ${FONT_FAMILY}`
 const STAR_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffe9a8' }
 const CONSTELLATION_STYLE = { font: `13px ${FONT_FAMILY}`, color: '#9fd0ff' }
 const RADIANT_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffae6b' }
@@ -60,6 +62,7 @@ export class LabelLayer {
   private constellations: ConstellationMeta[] = []
   private planets: PlanetData[] = []
   private dsoLabels: DsoLabel[] = []
+  private satelliteLabels: SatelliteLabel[] = []
   private radiants: { text: string; dir: [number, number, number] }[] = []
   private trailLabels: { text: string; dir: [number, number, number]; color: string; below?: boolean }[] = []
   private lst = 0
@@ -125,6 +128,11 @@ export class LabelLayer {
     this.showPlanets = show
   }
 
+  /** The ISS's name, which goes right after the planets: there is only ever one. */
+  setSatelliteLabels(labels: SatelliteLabel[]) {
+    this.satelliteLabels = labels
+  }
+
   /** Messier objects to name, brightest first. */
   setDeepSkyLabels(labels: DsoLabel[]) {
     this.dsoLabels = labels
@@ -170,7 +178,7 @@ export class LabelLayer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
     this.constellationHits = []
-    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0 || this.dsoLabels.length > 0 || this.trailLabels.length > 0
+    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0 || this.dsoLabels.length > 0 || this.satelliteLabels.length > 0 || this.trailLabels.length > 0
     if (!any) return
 
     ctx.textBaseline = 'middle'
@@ -209,6 +217,13 @@ export class LabelLayer {
       const azimuth = Math.atan2(r.dir[0], -r.dir[2])
       const pt = this.project(altitude, azimuth)
       if (pt) this.label(placed, r.text, pt.x, pt.y + 18, 'center', RADIANT_STYLE)
+    }
+
+    for (const s of this.satelliteLabels) {
+      const altitude = Math.asin(Math.max(-1, Math.min(1, s.dir[1])))
+      const azimuth = Math.atan2(s.dir[0], -s.dir[2])
+      const pt = this.project(altitude, azimuth)
+      if (pt) this.label(placed, s.text, pt.x + 10, pt.y - 2, 'left', { font: SATELLITE_FONT, color: s.color })
     }
 
     this.dsoNames(placed, true)

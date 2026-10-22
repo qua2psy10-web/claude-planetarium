@@ -32,6 +32,7 @@ export class PickingManager {
     lst: number,
     latRad: number,
     precession: Mat3,
+    limitMag: number,
   ): PickResult | null {
     const rect = this.canvas.getBoundingClientRect()
     const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1
@@ -49,6 +50,7 @@ export class PickingManager {
     // Check planets first (larger targets)
     for (const planet of planets) {
       if (planet.altitude < -2) continue
+      if (planet.name !== 'Sun' && planet.name !== 'Moon' && planet.magnitude > limitMag) continue
       const [x, y, z] = horizontalToCartesian(degToRad(planet.altitude), degToRad(planet.azimuth))
       const pDir = new THREE.Vector3(x, y, z).normalize()
       const dist = dir.distanceTo(pDir)
@@ -60,6 +62,7 @@ export class PickingManager {
 
     // Check stars
     for (const star of stars) {
+      if (star.mag > limitMag + 0.5) continue // washed out by the sky: nothing to click
       const eq = precessRaDec(star.ra, star.dec, precession)
       const { altitude, azimuth } = equatorialToHorizontal(eq.ra, eq.dec, lst, latRad)
       if (altitude < -0.02) continue

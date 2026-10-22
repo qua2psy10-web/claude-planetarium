@@ -3,7 +3,7 @@ import type { PlanetData } from '@/types/planet'
 import { degToRad, horizontalToCartesian } from '@/engine/astronomy/coordinates'
 
 const PLANET_COLORS: Record<string, number> = {
-  Sun: 0xffffaa,
+  Sun: 0xffffcc,
   Moon: 0xddddcc,
   Mercury: 0xaaaaaa,
   Venus: 0xffe0a0,
@@ -13,7 +13,7 @@ const PLANET_COLORS: Record<string, number> = {
 }
 
 const PLANET_SIZES: Record<string, number> = {
-  Sun: 24,
+  Sun: 40,
   Moon: 20,
   Mercury: 6,
   Venus: 10,
@@ -29,7 +29,8 @@ export class PlanetLayer {
     this.group = new THREE.Group()
   }
 
-  update(planets: PlanetData[], _showLabels: boolean) {
+  /** `limitMag`: planets fainter than this cannot be seen against the current sky (the Sun and Moon always are). */
+  update(planets: PlanetData[], limitMag: number) {
 
     // Remove old sprites not in current list
     const names = new Set(planets.map((p) => p.name))
@@ -44,7 +45,7 @@ export class PlanetLayer {
       // The Moon is drawn with its phase by MoonLayer instead.
       if (planet.name === 'Moon') continue
 
-      if (planet.altitude < -2) {
+      if (planet.altitude < -2 || (planet.name !== 'Sun' && planet.magnitude > limitMag)) {
         const s = this.sprites.get(planet.name)
         if (s) s.visible = false
         continue

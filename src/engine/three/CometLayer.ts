@@ -50,6 +50,7 @@ export class CometLayer {
 
   private width = 0
   private height = 0
+  private skyLimit = 6.5
   private dpr = 1
 
   constructor(host: HTMLCanvasElement, camera: THREE.PerspectiveCamera) {
@@ -82,6 +83,11 @@ export class CometLayer {
   setData(comets: CometElements[]) {
     this.comets = comets
     this.checkedAt = NaN
+  }
+
+  /** Faintest star visible against the current sky; comets need about a magnitude more. */
+  setLimitMag(m: number) {
+    this.skyLimit = m
   }
 
   setView(lst: number, latRad: number) {
@@ -117,7 +123,8 @@ export class CometLayer {
 
     for (const el of this.candidates) {
       const state = cometState(el, this.date)
-      if (state.magnitude >= DRAW_LIMIT) continue
+      const drawLimit = Math.min(DRAW_LIMIT, this.skyLimit - 1)
+      if (state.magnitude >= drawLimit) continue
 
       const head = this.place(state.ra, state.dec)
       // Draw the tail even when the head is below the horizon: it can reach up into the sky.
@@ -125,7 +132,7 @@ export class CometLayer {
       this.drawTail(head, tail, state.magnitude)
       if (!head) continue
 
-      const radius = Math.max(2.5, Math.min(12, 2.5 + (DRAW_LIMIT + 0.5 - state.magnitude) * 0.9))
+      const radius = Math.max(2.5, Math.min(12, 2.5 + (drawLimit + 0.5 - state.magnitude) * 0.9))
       const glow = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, radius * 2.4)
       glow.addColorStop(0, 'rgba(216, 255, 240, 0.9)')
       glow.addColorStop(0.35, 'rgba(160, 235, 210, 0.35)')
@@ -139,7 +146,7 @@ export class CometLayer {
       ctx.arc(head.x, head.y, Math.max(1.4, radius * 0.35), 0, Math.PI * 2)
       ctx.fill()
 
-      if (state.magnitude < LABEL_LIMIT) {
+      if (state.magnitude < Math.min(LABEL_LIMIT, drawLimit)) {
         this.labels.push({ text: `${el.nameJa ?? el.name} ${state.magnitude.toFixed(1)}等`, dir: head.dir, color: LABEL_COLOR, below: true })
       }
     }

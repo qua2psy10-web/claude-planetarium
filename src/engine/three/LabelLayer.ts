@@ -66,6 +66,7 @@ export class LabelLayer {
   private precession: Mat3 = IDENTITY
   private latRad = 0
   private fov = 75
+  private skyLimit = 6.5
   private showStars = false
   private showConstellations = false
   private showPlanets = false
@@ -103,6 +104,11 @@ export class LabelLayer {
     this.height = this.host.clientHeight || window.innerHeight
     this.overlay.width = Math.round(this.width * this.dpr)
     this.overlay.height = Math.round(this.height * this.dpr)
+  }
+
+  /** Faintest star visible against the current sky: fainter ones and planets lose their names. */
+  setLimitMag(m: number) {
+    this.skyLimit = m
   }
 
   setStars(stars: HygStar[]) {
@@ -179,6 +185,7 @@ export class LabelLayer {
     if (this.showPlanets) {
       for (const p of this.planets) {
         if (p.altitude < 0) continue
+        if (p.name !== 'Sun' && p.name !== 'Moon' && p.magnitude > this.skyLimit) continue
         const pt = this.project(degToRad(p.altitude), degToRad(p.azimuth))
         // The Moon is drawn as a large disk, so its name goes below the disk's edge.
         const below = p.name === 'Moon' ? moonDiskRadiusPx(this.fov, this.height) + 12 : 18
@@ -208,7 +215,7 @@ export class LabelLayer {
 
     if (this.showStars) {
       // Show fainter stars as the view zooms in.
-      const maxMag = Math.max(1.8, Math.min(5.5, 2.6 + 2 * Math.log2(75 / this.fov)))
+      const maxMag = Math.min(this.skyLimit, Math.max(1.8, Math.min(5.5, 2.6 + 2 * Math.log2(75 / this.fov))))
       for (const s of this.namedStars) {
         if (s.mag > maxMag) break
         const eq = precessRaDec(s.ra, s.dec, this.precession)

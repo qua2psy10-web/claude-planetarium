@@ -52,6 +52,7 @@ export class DsoLayer {
   private lst = 0
   private latRad = 0
   private fov = 75
+  private skyLimit = 6.5
   private precession: Mat3 = IDENTITY
 
   private labels: DsoLabel[] = []
@@ -101,6 +102,11 @@ export class DsoLayer {
     this.fov = fov
   }
 
+  /** Faintest star visible against the current sky; diffuse objects need about a magnitude more. */
+  setLimitMag(m: number) {
+    this.skyLimit = m
+  }
+
   setEnabled(enabled: boolean) {
     this.enabled = enabled
   }
@@ -124,7 +130,7 @@ export class DsoLayer {
     this.shown = []
     if (!this.enabled) return
 
-    const limit = dsoMagnitudeLimit(this.fov)
+    const limit = Math.min(dsoMagnitudeLimit(this.fov), this.skyLimit - 1)
     const pxPerArcmin = (this.height / 2 / Math.tan((this.fov * DEG) / 2)) * (DEG / 60)
 
     for (const o of this.objects) {

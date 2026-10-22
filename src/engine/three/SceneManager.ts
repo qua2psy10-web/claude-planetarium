@@ -23,6 +23,8 @@ import type { EclipseNow } from '@/engine/astronomy/eclipses'
 import type { CometElements } from '@/engine/astronomy/comets'
 import type { MessierObject } from '@/types/dso'
 import { precessionMatrix, type Mat3 } from '@/engine/astronomy/precession'
+import { limitingMagnitude, skyColors } from '@/engine/astronomy/skyBrightness'
+import { degToRad, horizontalToCartesian } from '@/engine/astronomy/coordinates'
 
 export class SceneManager {
   private renderer: THREE.WebGLRenderer
@@ -48,6 +50,9 @@ export class SceneManager {
   private comets: CometLayer
   private dso: DsoLayer
   private pickingManager: PickingManager | null = null
+  private atmosphere = true
+  /** Faintest star the naked eye sees against the current sky (see skyBrightness.ts). */
+  private limitMag = 6.5
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
   private frameCallback: (() => void) | null = null
@@ -142,7 +147,8 @@ export class SceneManager {
   }
 
   updatePlanets(planets: PlanetData[], showLabels: boolean) {
-    this.planetLayer.update(planets, showLabels)
+    this.updateSky(planets.find((p) => p.name === 'Sun'))
+    this.planetLayer.update(planets, this.limitMag)
     this.labels.setPlanets(planets, showLabels)
     this.moon.setPlanets(planets)
     this.trails.setPlanets(planets)
@@ -209,7 +215,8 @@ export class SceneManager {
 
   /** Shooting stars on/off; `date` is the simulated time, which decides which showers are active. */
   setMeteors(enabled: boolean, date: Date) {
-    this.meteors.setState(enabled, date)
+    // Meteors need a dark sky: none are drawn until the Sun is well below the horizon.
+    this.meteors.setState(enabled && this.limitMag > 3, date)
   }
 
   setAltazGridVisible(v: boolean) {
@@ -222,7 +229,26 @@ export class SceneManager {
   }
 
   setAtmosphere(v: boolean) {
-    this.skyDome.setAtmosphere(v)
+    this.atmosphere = v
+  }
+
+  /**
+   * Sky colour, ground colour and the limiting magnitude follow the Sun's altitude. With the
+   * atmosphere switched off the sky stays dark and every star shows, as in space.
+   */
+  private updateSky(sun: PlanetData | undefined) {
+    const alt = sun?.altitude ?? -90
+    const colors = this.atmosphere && sun ? skyColors(alt) : null
+    const sunDir = sun ? horizontalToCartesian(degToRad(sun.altitude), degToRad(sun.azimuth), 1) : [0, -1, 0]
+    this.skyDome.setSky(colors, sunDir as [number, number, number])
+    this.horizonMask.setGround(colors ? colors.horizon.map((c) => c * 0.12) as [number, number, number] : [0, 0, 0])
+
+    this.limitMag = this.atmosphere ? limitingMagnitude(alt) : 6.5
+    this.starField?.setLimitMag(this.limitMag)
+    this.milkyWay.setLimitMag(this.limitMag)
+    this.labels.setLimitMag(this.limitMag)
+    this.dso.setLimitMag(this.limitMag)
+    this.comets.setLimitMag(this.limitMag)
   }
 
   lookAt(azDeg: number, altDeg: number) {
@@ -231,7 +257,7 @@ export class SceneManager {
 
   pick(clientX: number, clientY: number, lst: number, latRad: number, planets: PlanetData[]) {
     if (!this.pickingManager || !this.starField) return null
-    return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, this.dso.visibleObjects(), lst, latRad, this.precession)
+    return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, this.dso.visibleObjects(), lst, latRad, this.precession, this.limitMag)
   }
 
   setFrameCallback(fn: () => void) {

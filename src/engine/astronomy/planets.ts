@@ -12,6 +12,13 @@ const PLANET_BODIES: Array<{ body: Astronomy.Body; name: string; nameJa: string 
   { body: Astronomy.Body.Saturn, name: 'Saturn', nameJa: '土星' },
 ]
 
+/** Altitude of the Sun's centre in degrees, with refraction. */
+export function getSunAltitude(date: Date, latDeg: number, lonDeg: number): number {
+  const observer = new Astronomy.Observer(latDeg, lonDeg, 0)
+  const eq = Astronomy.Equator(Astronomy.Body.Sun, date, observer, true, true)
+  return Astronomy.Horizon(date, observer, eq.ra, eq.dec, 'normal').altitude
+}
+
 export function getPlanetPositions(date: Date, latDeg: number, lonDeg: number): PlanetData[] {
   const observer = new Astronomy.Observer(latDeg, lonDeg, 0)
   const results: PlanetData[] = []

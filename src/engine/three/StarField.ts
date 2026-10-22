@@ -8,6 +8,7 @@ uniform float uLST;
 uniform float uLat;
 uniform float uFovScale;
 uniform float uPixelRatio;
+uniform float uLimitMag;
 
 attribute float aRa;
 attribute float aDec;
@@ -42,7 +43,10 @@ void main() {
   float sinAlt = sin(dec) * sin(uLat) + cos(dec) * cos(uLat) * cos(ha);
   float alt = asin(clamp(sinAlt, -1.0, 1.0));
 
-  if (alt < -0.017) {  // ~-1 degree
+  // Faintest visible star for the current sky (twilight and daylight wash stars out).
+  float vis = clamp(uLimitMag - aMag + 1.0, 0.0, 1.0);
+
+  if (alt < -0.017 || vis <= 0.0) {  // below ~-1 degree, or too faint for this sky
     gl_PointSize = 0.0;
     vColor = vec3(0.0);
     vBrightness = 0.0;
@@ -67,7 +71,7 @@ void main() {
   gl_PointSize = clamp(size, 2.0, 22.0) * uPixelRatio;
 
   // Brightness is separate from size: faint stars are dimmer but never vanish.
-  vBrightness = clamp(0.45 + (6.5 - aMag) * 0.2, 0.45, 1.0);
+  vBrightness = clamp(0.45 + (6.5 - aMag) * 0.2, 0.45, 1.0) * vis;
 
   // Dim stars near horizon for realism
   float fade = smoothstep(0.0, 0.05, alt);
@@ -129,6 +133,7 @@ export class StarField {
         uLat: { value: 0.623 }, // ~35.7 deg (Tokyo)
         uFovScale: { value: 1.5 },
         uPixelRatio: { value: 1 },
+        uLimitMag: { value: 6.5 },
         uPrec: { value: precession },
       },
       transparent: true,
@@ -146,6 +151,10 @@ export class StarField {
     this.material.uniforms.uLST.value = lst
     this.material.uniforms.uLat.value = latRad
     this.material.uniforms.uFovScale.value = fovScale
+  }
+
+  setLimitMag(m: number) {
+    this.material.uniforms.uLimitMag.value = m
   }
 
   setPixelRatio(ratio: number) {

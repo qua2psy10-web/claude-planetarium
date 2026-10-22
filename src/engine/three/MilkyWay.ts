@@ -42,6 +42,8 @@ void main() {
 }
 `
 
+const BASE_STRENGTH = 0.3
+
 /** The Milky Way as a glow on the sky sphere, drawn behind the stars. */
 export class MilkyWay {
   mesh: THREE.Mesh
@@ -58,7 +60,7 @@ export class MilkyWay {
         uPrec: { value: precession },
         uLST: { value: 0 },
         uLat: { value: 0.623 },
-        uStrength: { value: 0.3 },
+        uStrength: { value: BASE_STRENGTH },
       },
       side: THREE.BackSide,
       transparent: true,
@@ -85,6 +87,11 @@ export class MilkyWay {
   updateUniforms(lst: number, latRad: number) {
     this.material.uniforms.uLST.value = lst
     this.material.uniforms.uLat.value = latRad
+  }
+
+  /** The Milky Way needs a dark sky: it fades out through twilight as the limiting magnitude drops. */
+  setLimitMag(limitMag: number) {
+    this.material.uniforms.uStrength.value = BASE_STRENGTH * Math.max(0, Math.min(1, (limitMag - 2.5) / 3.5))
   }
 
   setVisible(v: boolean) {

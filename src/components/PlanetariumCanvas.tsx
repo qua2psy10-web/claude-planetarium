@@ -3,6 +3,7 @@ import { SceneManager } from '@/engine/three/SceneManager'
 import { loadStars } from '@/engine/data/starLoader'
 import { loadConstellationLines } from '@/engine/data/constellationLoader'
 import { getPlanetPositions } from '@/engine/astronomy/planets'
+import { precessRaDec, precessionMatrix } from '@/engine/astronomy/precession'
 import { computeLST } from '@/engine/astronomy/time'
 import { getMoonPhaseAngle } from '@/engine/astronomy/moonPhase'
 import { eclipseNow } from '@/engine/astronomy/eclipses'
@@ -44,7 +45,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     const latRad = degToRad(s.latitude)
 
     // Update scene every frame (uniforms are cheap)
-    sceneRef.current?.updateUniforms(lst, latRad, s.fov)
+    sceneRef.current?.updateUniforms(lst, latRad, s.fov, simTime)
 
     // Update planet positions (cheap via astronomy-engine)
     const planets = getPlanetPositions(simTime, s.latitude, s.longitude)
@@ -96,6 +97,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
       computeLST(store.simulatedTime, store.longitude),
       degToRad(store.latitude),
       store.fov,
+      store.simulatedTime,
     )
   }, [store.fov, store.latitude, store.longitude, store.simulatedTime])
 
@@ -120,7 +122,8 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
         // No star or planet under the pointer: maybe a constellation name label.
         const c = sceneRef.current?.pickConstellation(e.clientX, e.clientY)
         if (c) {
-          const hor = equatorialToHorizontal(c.centroidRa, c.centroidDec, lst, degToRad(s.latitude))
+          const eq = precessRaDec(c.centroidRa, c.centroidDec, precessionMatrix(s.simulatedTime))
+          const hor = equatorialToHorizontal(eq.ra, eq.dec, lst, degToRad(s.latitude))
           s.selectObject({
             type: 'constellation',
             constellation: c,

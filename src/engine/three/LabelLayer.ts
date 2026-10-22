@@ -3,6 +3,7 @@ import type { HygStar } from '@/types/star'
 import type { ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
+import { precessRaDec, IDENTITY, type Mat3 } from '@/engine/astronomy/precession'
 import { moonDiskRadiusPx } from '@/engine/astronomy/moonPhase'
 
 const DEG = Math.PI / 180
@@ -59,6 +60,7 @@ export class LabelLayer {
   private radiants: { text: string; dir: [number, number, number] }[] = []
   private trailLabels: { text: string; dir: [number, number, number]; color: string; below?: boolean }[] = []
   private lst = 0
+  private precession: Mat3 = IDENTITY
   private latRad = 0
   private fov = 75
   private showStars = false
@@ -122,6 +124,11 @@ export class LabelLayer {
   /** Date labels along the planets' paths, as unit vectors in scene (horizontal) coordinates. */
   setTrailLabels(labels: { text: string; dir: [number, number, number]; color: string; below?: boolean }[]) {
     this.trailLabels = labels
+  }
+
+  /** J2000 -> equinox of date, applied to catalogue positions (stars, constellation centres). */
+  setPrecession(m: Mat3) {
+    this.precession = m
   }
 
   setView(lst: number, latRad: number, fov: number) {
@@ -194,7 +201,8 @@ export class LabelLayer {
       const maxMag = Math.max(1.8, Math.min(5.5, 2.6 + 2 * Math.log2(75 / this.fov)))
       for (const s of this.namedStars) {
         if (s.mag > maxMag) break
-        const hor = equatorialToHorizontal(s.ra, s.dec, this.lst, this.latRad)
+        const eq = precessRaDec(s.ra, s.dec, this.precession)
+        const hor = equatorialToHorizontal(eq.ra, eq.dec, this.lst, this.latRad)
         if (hor.altitude < degToRad(1)) continue
         const pt = this.project(hor.altitude, hor.azimuth)
         if (pt) this.label(placed, STAR_NAMES_JA[s.proper] ?? s.proper, pt.x + 8, pt.y - 2, 'left', STAR_STYLE)
@@ -203,7 +211,8 @@ export class LabelLayer {
 
     if (this.showConstellations) {
       for (const c of this.constellations) {
-        const hor = equatorialToHorizontal(c.centroidRa, c.centroidDec, this.lst, this.latRad)
+        const eq = precessRaDec(c.centroidRa, c.centroidDec, this.precession)
+        const hor = equatorialToHorizontal(eq.ra, eq.dec, this.lst, this.latRad)
         if (hor.altitude < degToRad(3)) continue
         const pt = this.project(hor.altitude, hor.azimuth)
         if (!pt) continue

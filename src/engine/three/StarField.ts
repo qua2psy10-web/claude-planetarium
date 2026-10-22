@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import type { HygStar } from '@/types/star'
+import { PRECESS_GLSL } from '@/engine/astronomy/precession'
 
 const vertexShader = `
+${PRECESS_GLSL}
 uniform float uLST;
 uniform float uLat;
 uniform float uFovScale;
@@ -32,8 +34,12 @@ vec3 bvToRgb(float bv) {
 }
 
 void main() {
-  float ha = uLST - aRa;
-  float sinAlt = sin(aDec) * sin(uLat) + cos(aDec) * cos(uLat) * cos(ha);
+  // Catalogue positions are J2000; bring them to the equinox of date like the planets.
+  vec2 eq = precess(aRa, aDec);
+  float ra = eq.x;
+  float dec = eq.y;
+  float ha = uLST - ra;
+  float sinAlt = sin(dec) * sin(uLat) + cos(dec) * cos(uLat) * cos(ha);
   float alt = asin(clamp(sinAlt, -1.0, 1.0));
 
   if (alt < -0.017) {  // ~-1 degree
@@ -47,7 +53,7 @@ void main() {
   // This atan form measures azimuth from SOUTH (towards west). The scene, planets,
   // picking and compass all use azimuth from NORTH (towards east, see
   // horizontalToCartesian), which is this value + 180 degrees: negate x and z.
-  float az = atan(sin(ha), cos(ha) * sin(uLat) - tan(aDec) * cos(uLat));
+  float az = atan(sin(ha), cos(ha) * sin(uLat) - tan(dec) * cos(uLat));
 
   float cosAlt = cos(alt);
   vec3 pos = vec3(-cosAlt * sin(az), sin(alt), cosAlt * cos(az)) * 100.0;
@@ -88,7 +94,7 @@ export class StarField {
   private material: THREE.ShaderMaterial
   private stars: HygStar[]
 
-  constructor(stars: HygStar[]) {
+  constructor(stars: HygStar[], precession: THREE.Matrix3) {
     this.stars = stars
     const geo = new THREE.BufferGeometry()
 
@@ -123,6 +129,7 @@ export class StarField {
         uLat: { value: 0.623 }, // ~35.7 deg (Tokyo)
         uFovScale: { value: 1.5 },
         uPixelRatio: { value: 1 },
+        uPrec: { value: precession },
       },
       transparent: true,
       depthWrite: false,

@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { HygStar } from '@/types/star'
 import type { PlanetData } from '@/types/planet'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
+import { precessRaDec, type Mat3 } from '@/engine/astronomy/precession'
 
 interface PickResult {
   type: 'star' | 'planet'
@@ -27,6 +28,7 @@ export class PickingManager {
     planets: PlanetData[],
     lst: number,
     latRad: number,
+    precession: Mat3,
   ): PickResult | null {
     const rect = this.canvas.getBoundingClientRect()
     const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1
@@ -55,7 +57,8 @@ export class PickingManager {
 
     // Check stars
     for (const star of stars) {
-      const { altitude, azimuth } = equatorialToHorizontal(star.ra, star.dec, lst, latRad)
+      const eq = precessRaDec(star.ra, star.dec, precession)
+      const { altitude, azimuth } = equatorialToHorizontal(eq.ra, eq.dec, lst, latRad)
       if (altitude < -0.02) continue
 
       const [x, y, z] = horizontalToCartesian(altitude, azimuth)

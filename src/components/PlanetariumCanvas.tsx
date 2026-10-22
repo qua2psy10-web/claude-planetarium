@@ -12,6 +12,7 @@ import { buildSearchIndex, addDeepSkyToSearch } from '@/engine/data/searchIndex'
 import { loadComets } from '@/engine/data/cometLoader'
 import { loadMessier } from '@/engine/data/dsoLoader'
 import { loadIss } from '@/engine/data/satelliteLoader'
+import { setCaptureHandler } from '@/engine/capture'
 import { loadConstellationMeta } from '@/engine/data/constellationLoader'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import type { PlanetData } from '@/types/planet'
@@ -75,6 +76,11 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
 
     const scene = new SceneManager(canvasRef.current)
     sceneRef.current = scene
+    // The camera starts facing south; a shared link (or anything else that set the view before the
+    // scene existed) may want it elsewhere.
+    const view = usePlanetariumStore.getState()
+    scene.lookAt(view.viewAzimuth, view.viewAltitude)
+    setCaptureHandler((caption) => scene.captureImage(caption))
 
     // Load data async, then start render loop
     Promise.all([loadStars(), loadConstellationLines(), loadConstellationMeta()]).then(
@@ -93,6 +99,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     )
 
     return () => {
+      setCaptureHandler(null)
       scene.dispose()
       sceneRef.current = null
     }

@@ -11,6 +11,7 @@ import { degToRad, radToDeg, equatorialToHorizontal } from '@/engine/astronomy/c
 import { buildSearchIndex, addDeepSkyToSearch } from '@/engine/data/searchIndex'
 import { loadComets } from '@/engine/data/cometLoader'
 import { loadMessier } from '@/engine/data/dsoLoader'
+import { loadIss } from '@/engine/data/satelliteLoader'
 import { loadConstellationMeta } from '@/engine/data/constellationLoader'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import type { PlanetData } from '@/types/planet'
@@ -65,6 +66,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     sceneRef.current?.setPlanetTrails(s.showPlanetTrails, simTime)
     sceneRef.current?.setAnalemma(s.showAnalemma, simTime, s.latitude, s.longitude)
     sceneRef.current?.setComets(s.showComets, simTime)
+    sceneRef.current?.setSatellites(s.showSatellites, simTime, s.latitude, s.longitude)
     sceneRef.current?.setAtmosphere(s.showAtmosphere)
   }, [])
 
@@ -81,6 +83,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
         scene.setConstellationMeta(meta)
         // Comets load on their own: the planetarium works without them.
         loadComets().then((comets) => scene.setCometData(comets)).catch(() => {})
+        loadIss().then((iss) => scene.setSatelliteTrack(iss?.track ?? null)).catch(() => {})
         loadMessier().then((objects) => { scene.setDeepSkyData(objects); addDeepSkyToSearch(objects) }).catch(() => {})
         buildSearchIndex(stars, meta)
         lastFrameRef.current = Date.now()

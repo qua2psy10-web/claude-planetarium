@@ -17,6 +17,7 @@ const TOGGLES: { key: DisplayToggle; label: string }[] = [
   { key: 'showPlanetTrails', label: '惑星の軌跡' },
   { key: 'showAnalemma', label: '太陽の軌跡' },
   { key: 'showComets', label: '彗星' },
+  { key: 'showSatellites', label: '人工衛星 (ISS)' },
 ]
 
 export default function SettingsPanel() {

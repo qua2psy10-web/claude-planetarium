@@ -29,6 +29,7 @@ const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
   showStarNames: true,
   showMilkyWay: true,
   showDeepSky: true,
+  showSatellites: true,
 
   selectedObject: null,
 

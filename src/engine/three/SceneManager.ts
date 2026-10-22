@@ -11,6 +11,8 @@ import { EquatorialGrid } from './EquatorialGrid'
 import { AltazGrid } from './AltazGrid'
 import { MilkyWay } from './MilkyWay'
 import { DsoLayer } from './DsoLayer'
+import { SatelliteLayer } from './SatelliteLayer'
+import type { SatelliteTrack } from '@/engine/astronomy/satellites'
 import { MeteorLayer } from './MeteorLayer'
 import { MoonLayer } from './MoonLayer'
 import { TrailLayer } from './TrailLayer'
@@ -49,6 +51,7 @@ export class SceneManager {
   private analemma: AnalemmaLayer
   private comets: CometLayer
   private dso: DsoLayer
+  private satellites: SatelliteLayer
   private pickingManager: PickingManager | null = null
   private atmosphere = true
   /** Faintest star the naked eye sees against the current sky (see skyBrightness.ts). */
@@ -97,6 +100,7 @@ export class SceneManager {
 
     this.cameraController = new CameraController(this.camera, canvas)
     this.dso = new DsoLayer(canvas, this.camera)
+    this.satellites = new SatelliteLayer(canvas, this.camera)
     this.comets = new CometLayer(canvas, this.camera)
     this.analemma = new AnalemmaLayer(canvas, this.camera)
     this.trails = new TrailLayer(canvas, this.camera)
@@ -165,6 +169,14 @@ export class SceneManager {
   /** The constellation whose name label is at this screen position, if any. */
   pickConstellation(clientX: number, clientY: number): ConstellationMeta | null {
     return this.labels.constellationAt(clientX, clientY)
+  }
+
+  setSatelliteTrack(track: SatelliteTrack | null) {
+    this.satellites.setTrack(track)
+  }
+
+  setSatellites(enabled: boolean, date: Date, latDeg: number, lonDeg: number) {
+    this.satellites.setState(enabled, date, latDeg, lonDeg)
   }
 
   setDeepSkyData(objects: MessierObject[]) {
@@ -248,6 +260,7 @@ export class SceneManager {
     this.milkyWay.setLimitMag(this.limitMag)
     this.labels.setLimitMag(this.limitMag)
     this.dso.setLimitMag(this.limitMag)
+    this.satellites.setLimitMag(this.limitMag)
     this.comets.setLimitMag(this.limitMag)
   }
 
@@ -270,6 +283,8 @@ export class SceneManager {
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
       this.dso.draw()
+      this.satellites.draw()
+      this.labels.setSatelliteLabels(this.satellites.tickLabels())
       this.labels.setDeepSkyLabels(this.dso.tickLabels())
       this.comets.draw()
       this.analemma.draw()
@@ -300,6 +315,7 @@ export class SceneManager {
     this.analemma.resize()
     this.comets.resize()
     this.dso.resize()
+    this.satellites.resize()
   }
 
   dispose() {
@@ -312,6 +328,7 @@ export class SceneManager {
     this.analemma.dispose()
     this.comets.dispose()
     this.dso.dispose()
+    this.satellites.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

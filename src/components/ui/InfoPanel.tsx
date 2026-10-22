@@ -1,13 +1,14 @@
 import { X } from 'lucide-react'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import { findConstellation } from '@/engine/data/constellationLoader'
+import { DSO_TYPE_JA } from '@/types/dso'
 import { getMoonInfoCached } from '@/engine/astronomy/moonPhase'
 
 export default function InfoPanel() {
   const { selectedObject, selectObject, simulatedTime } = usePlanetariumStore()
   if (!selectedObject) return null
 
-  const { type, star, planet, constellation, altitude, azimuth } = selectedObject
+  const { type, star, planet, constellation, dso, altitude, azimuth } = selectedObject
   // The constellation a selected star belongs to, for its name and story.
   const starConstellation = star?.con ? findConstellation(star.con) : undefined
 
@@ -52,6 +53,29 @@ export default function InfoPanel() {
             <Row label="高度" value={`${altitude.toFixed(1)}°`} />
             <Row label="方位角" value={`${azimuth.toFixed(1)}°`} />
             {planet.name === 'Moon' && <MoonRows date={simulatedTime} />}
+          </div>
+        </>
+      )}
+
+      {type === 'dso' && dso && (
+        <>
+          <div className="text-rose-300 text-lg font-bold mb-1">{dso.nameJa ?? dso.id}</div>
+          <div className="text-white/60 text-xs mb-3">
+            {dso.id}{dso.nameJa && dso.nameEn ? ` · ${dso.nameEn}` : ''} · {DSO_TYPE_JA[dso.type]}
+          </div>
+          <div className="space-y-1 text-sm">
+            <Row label="等級" value={dso.mag.toFixed(1)} />
+            {dso.size > 0 && (
+              <Row
+                label="見かけの大きさ"
+                value={dso.sizeMinor && dso.sizeMinor !== dso.size ? `${dso.size}′ × ${dso.sizeMinor}′` : `${dso.size}′`}
+              />
+            )}
+            {dso.ngc && <Row label="NGC/他" value={dso.ngc} />}
+            <Row label="高度" value={`${altitude.toFixed(1)}°`} />
+            <Row label="方位角" value={`${azimuth.toFixed(1)}°`} />
+            <Row label="赤経" value={`${((dso.ra * 180) / Math.PI / 15).toFixed(3)}h`} />
+            <Row label="赤緯" value={`${((dso.dec * 180) / Math.PI).toFixed(2)}°`} />
           </div>
         </>
       )}

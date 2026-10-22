@@ -4,6 +4,7 @@ import type { ConstellationMeta } from '@/types/constellation'
 import type { PlanetData } from '@/types/planet'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
 import { precessRaDec, IDENTITY, type Mat3 } from '@/engine/astronomy/precession'
+import type { DsoLabel } from './DsoLayer'
 import { moonDiskRadiusPx } from '@/engine/astronomy/moonPhase'
 
 const DEG = Math.PI / 180
@@ -11,6 +12,7 @@ const DEG = Math.PI / 180
 const FONT_FAMILY = "'Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic','Noto Sans JP',sans-serif"
 
 const PLANET_STYLE = { font: `bold 14px ${FONT_FAMILY}`, color: '#ffd54a' }
+const DSO_STYLE = { font: `11px ${FONT_FAMILY}`, color: '#ffc9a8' }
 const STAR_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffe9a8' }
 const CONSTELLATION_STYLE = { font: `13px ${FONT_FAMILY}`, color: '#9fd0ff' }
 const RADIANT_STYLE = { font: `12px ${FONT_FAMILY}`, color: '#ffae6b' }
@@ -57,6 +59,7 @@ export class LabelLayer {
   private namedStars: HygStar[] = []
   private constellations: ConstellationMeta[] = []
   private planets: PlanetData[] = []
+  private dsoLabels: DsoLabel[] = []
   private radiants: { text: string; dir: [number, number, number] }[] = []
   private trailLabels: { text: string; dir: [number, number, number]; color: string; below?: boolean }[] = []
   private lst = 0
@@ -116,6 +119,11 @@ export class LabelLayer {
     this.showPlanets = show
   }
 
+  /** Messier objects to name, brightest first. */
+  setDeepSkyLabels(labels: DsoLabel[]) {
+    this.dsoLabels = labels
+  }
+
   /** Meteor shower radiants to name, as unit vectors in scene (horizontal) coordinates. */
   setRadiants(radiants: { text: string; dir: [number, number, number] }[]) {
     this.radiants = radiants
@@ -156,7 +164,7 @@ export class LabelLayer {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0)
     ctx.clearRect(0, 0, this.width, this.height)
     this.constellationHits = []
-    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0 || this.trailLabels.length > 0
+    const any = this.showStars || this.showConstellations || this.showPlanets || this.showGrid || this.showAltaz || this.radiants.length > 0 || this.dsoLabels.length > 0 || this.trailLabels.length > 0
     if (!any) return
 
     ctx.textBaseline = 'middle'
@@ -196,6 +204,8 @@ export class LabelLayer {
       if (pt) this.label(placed, r.text, pt.x, pt.y + 18, 'center', RADIANT_STYLE)
     }
 
+    this.dsoNames(placed, true)
+
     if (this.showStars) {
       // Show fainter stars as the view zooms in.
       const maxMag = Math.max(1.8, Math.min(5.5, 2.6 + 2 * Math.log2(75 / this.fov)))
@@ -208,6 +218,8 @@ export class LabelLayer {
         if (pt) this.label(placed, STAR_NAMES_JA[s.proper] ?? s.proper, pt.x + 8, pt.y - 2, 'left', STAR_STYLE)
       }
     }
+
+    this.dsoNames(placed, false)
 
     if (this.showConstellations) {
       for (const c of this.constellations) {
@@ -231,6 +243,17 @@ export class LabelLayer {
 
     if (this.showAltaz) this.altazLabels(placed)
     if (this.showGrid) this.gridLabels(placed)
+  }
+
+  /** Names of Messier objects: the bright ones go before the star names, the rest after. */
+  private dsoNames(placed: Rect[], bright: boolean) {
+    for (const d of this.dsoLabels) {
+      if (d.bright !== bright) continue
+      const altitude = Math.asin(Math.max(-1, Math.min(1, d.dir[1])))
+      const azimuth = Math.atan2(d.dir[0], -d.dir[2])
+      const pt = this.project(altitude, azimuth)
+      if (pt) this.label(placed, d.text, pt.x, pt.y + d.radiusPx + 10, 'center', DSO_STYLE)
+    }
   }
 
   /**

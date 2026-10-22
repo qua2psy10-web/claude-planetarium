@@ -9,6 +9,8 @@ import { PickingManager } from './PickingManager'
 import { LabelLayer } from './LabelLayer'
 import { EquatorialGrid } from './EquatorialGrid'
 import { AltazGrid } from './AltazGrid'
+import { MilkyWay } from './MilkyWay'
+import { DsoLayer } from './DsoLayer'
 import { MeteorLayer } from './MeteorLayer'
 import { MoonLayer } from './MoonLayer'
 import { TrailLayer } from './TrailLayer'
@@ -19,6 +21,7 @@ import type { ConstellationLines as ConLinesData, ConstellationMeta } from '@/ty
 import type { PlanetData } from '@/types/planet'
 import type { EclipseNow } from '@/engine/astronomy/eclipses'
 import type { CometElements } from '@/engine/astronomy/comets'
+import type { MessierObject } from '@/types/dso'
 import { precessionMatrix, type Mat3 } from '@/engine/astronomy/precession'
 
 export class SceneManager {
@@ -31,6 +34,7 @@ export class SceneManager {
   /** J2000 -> equinox of date; shared by reference with the star and line shaders. */
   private precessionUniform = new THREE.Matrix3()
   private precession: Mat3 = precessionMatrix(new Date())
+  private milkyWay: MilkyWay
   private planetLayer: PlanetLayer
   private horizonMask: HorizonMask
   private cameraController: CameraController
@@ -42,6 +46,7 @@ export class SceneManager {
   private trails: TrailLayer
   private analemma: AnalemmaLayer
   private comets: CometLayer
+  private dso: DsoLayer
   private pickingManager: PickingManager | null = null
   private rafId: number | null = null
   private canvas: HTMLCanvasElement
@@ -70,6 +75,9 @@ export class SceneManager {
     this.skyDome = new SkyDome()
     this.scene.add(this.skyDome.mesh)
 
+    this.milkyWay = new MilkyWay(this.precessionUniform)
+    this.scene.add(this.milkyWay.mesh)
+
     this.planetLayer = new PlanetLayer()
     this.scene.add(this.planetLayer.group)
 
@@ -83,6 +91,7 @@ export class SceneManager {
     this.scene.add(this.horizonMask.mesh)
 
     this.cameraController = new CameraController(this.camera, canvas)
+    this.dso = new DsoLayer(canvas, this.camera)
     this.comets = new CometLayer(canvas, this.camera)
     this.analemma = new AnalemmaLayer(canvas, this.camera)
     this.trails = new TrailLayer(canvas, this.camera)
@@ -117,9 +126,12 @@ export class SceneManager {
     this.precession = precessionMatrix(date)
     this.precessionUniform.set(...this.precession)
     this.labels.setPrecession(this.precession)
+    this.dso.setPrecession(this.precession)
+    this.dso.setView(lst, latRad, fov)
     const fovScale = 75 / fov  // normalize to base FOV of 75
     this.starField?.updateUniforms(lst, latRad, fovScale)
     this.constellationLines?.updateUniforms(lst, latRad)
+    this.milkyWay.updateUniforms(lst, latRad)
     this.equatorialGrid.updateUniforms(lst, latRad)
     this.cameraController.updateFov(fov)
     this.labels.setView(lst, latRad, fov)
@@ -147,6 +159,18 @@ export class SceneManager {
   /** The constellation whose name label is at this screen position, if any. */
   pickConstellation(clientX: number, clientY: number): ConstellationMeta | null {
     return this.labels.constellationAt(clientX, clientY)
+  }
+
+  setDeepSkyData(objects: MessierObject[]) {
+    this.dso.setData(objects)
+  }
+
+  setDeepSkyVisible(v: boolean) {
+    this.dso.setEnabled(v)
+  }
+
+  setMilkyWayVisible(v: boolean) {
+    this.milkyWay.setVisible(v)
   }
 
   setEquatorialGridVisible(v: boolean) {
@@ -207,7 +231,7 @@ export class SceneManager {
 
   pick(clientX: number, clientY: number, lst: number, latRad: number, planets: PlanetData[]) {
     if (!this.pickingManager || !this.starField) return null
-    return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, lst, latRad, this.precession)
+    return this.pickingManager.pick(clientX, clientY, this.starField.getStars(), planets, this.dso.visibleObjects(), lst, latRad, this.precession)
   }
 
   setFrameCallback(fn: () => void) {
@@ -219,6 +243,8 @@ export class SceneManager {
       this.rafId = requestAnimationFrame(loop)
       this.frameCallback?.()
       this.renderer.render(this.scene, this.camera)
+      this.dso.draw()
+      this.labels.setDeepSkyLabels(this.dso.tickLabels())
       this.comets.draw()
       this.analemma.draw()
       this.trails.draw()
@@ -247,6 +273,7 @@ export class SceneManager {
     this.trails.resize()
     this.analemma.resize()
     this.comets.resize()
+    this.dso.resize()
   }
 
   dispose() {
@@ -258,6 +285,7 @@ export class SceneManager {
     this.trails.dispose()
     this.analemma.dispose()
     this.comets.dispose()
+    this.dso.dispose()
     window.removeEventListener('resize', this.onResize)
     this.renderer.dispose()
   }

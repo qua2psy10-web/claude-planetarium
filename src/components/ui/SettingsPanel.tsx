@@ -8,6 +8,8 @@ const TOGGLES: { key: DisplayToggle; label: string }[] = [
   { key: 'showConstellationNames', label: '星座名' },
   { key: 'showPlanetLabels', label: '惑星' },
   { key: 'showStarNames', label: '星の名前' },
+  { key: 'showMilkyWay', label: '天の川' },
+  { key: 'showDeepSky', label: '星雲・星団 (M天体)' },
   { key: 'showAtmosphere', label: '大気効果' },
   { key: 'showEquatorialGrid', label: '赤道グリッド' },
   { key: 'showAltazGrid', label: '地平グリッド' },

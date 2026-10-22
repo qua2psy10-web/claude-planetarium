@@ -1,17 +1,19 @@
 import Fuse from 'fuse.js'
 import type { HygStar } from '@/types/star'
 import type { ConstellationMeta } from '@/types/constellation'
+import type { MessierObject } from '@/types/dso'
 
 export type SearchResult =
   | { type: 'star'; star: HygStar }
   | { type: 'constellation'; constellation: ConstellationMeta }
   | { type: 'planet'; name: string; nameJa: string; body: string }
+  | { type: 'dso'; dso: MessierObject }
 
 interface SearchEntry {
-  type: 'star' | 'constellation' | 'planet'
+  type: 'star' | 'constellation' | 'planet' | 'dso'
   label: string
   labelJa: string
-  data: HygStar | ConstellationMeta | { name: string; nameJa: string; body: string }
+  data: HygStar | ConstellationMeta | MessierObject | { name: string; nameJa: string; body: string }
 }
 
 const PLANETS = [
@@ -25,9 +27,17 @@ const PLANETS = [
 ]
 
 let fuse: Fuse<SearchEntry> | null = null
+let entries: SearchEntry[] = []
+
+const makeFuse = () =>
+  new Fuse(entries, {
+    keys: ['label', 'labelJa'],
+    threshold: 0.4,
+    minMatchCharLength: 1,
+  })
 
 export function buildSearchIndex(stars: HygStar[], constellations: ConstellationMeta[]) {
-  const entries: SearchEntry[] = []
+  entries = []
 
   for (const s of stars) {
     if (!s.proper) continue
@@ -42,11 +52,21 @@ export function buildSearchIndex(stars: HygStar[], constellations: Constellation
     entries.push({ type: 'planet', label: p.name, labelJa: p.nameJa, data: p })
   }
 
-  fuse = new Fuse(entries, {
-    keys: ['label', 'labelJa'],
-    threshold: 0.4,
-    minMatchCharLength: 1,
-  })
+  fuse = makeFuse()
+}
+
+/** Messier objects arrive after the first index is built; searchable by M number and by name. */
+export function addDeepSkyToSearch(objects: MessierObject[]) {
+  entries = entries.filter((e) => e.type !== 'dso')
+  for (const o of objects) {
+    entries.push({
+      type: 'dso',
+      label: [o.id, o.nameEn, o.ngc].filter(Boolean).join(' '),
+      labelJa: o.nameJa ?? o.id,
+      data: o,
+    })
+  }
+  fuse = makeFuse()
 }
 
 export function search(query: string): SearchResult[] {
@@ -55,6 +75,7 @@ export function search(query: string): SearchResult[] {
     const e = r.item
     if (e.type === 'star') return { type: 'star', star: e.data as HygStar }
     if (e.type === 'constellation') return { type: 'constellation', constellation: e.data as ConstellationMeta }
+    if (e.type === 'dso') return { type: 'dso', dso: e.data as MessierObject }
     return { type: 'planet', ...(e.data as { name: string; nameJa: string; body: string }) }
   })
 }

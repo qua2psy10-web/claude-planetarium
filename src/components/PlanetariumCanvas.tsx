@@ -8,8 +8,9 @@ import { computeLST } from '@/engine/astronomy/time'
 import { getMoonPhaseAngle } from '@/engine/astronomy/moonPhase'
 import { eclipseNow } from '@/engine/astronomy/eclipses'
 import { degToRad, radToDeg, equatorialToHorizontal } from '@/engine/astronomy/coordinates'
-import { buildSearchIndex } from '@/engine/data/searchIndex'
+import { buildSearchIndex, addDeepSkyToSearch } from '@/engine/data/searchIndex'
 import { loadComets } from '@/engine/data/cometLoader'
+import { loadMessier } from '@/engine/data/dsoLoader'
 import { loadConstellationMeta } from '@/engine/data/constellationLoader'
 import usePlanetariumStore from '@/store/usePlanetariumStore'
 import type { PlanetData } from '@/types/planet'
@@ -56,6 +57,8 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
     sceneRef.current?.setEclipse(eclipseNow(simTime, s.latitude, s.longitude, phaseAngle))
     sceneRef.current?.setConstellationLinesVisible(s.showConstellationLines)
     sceneRef.current?.setLabelVisibility(s.showConstellationNames, s.showStarNames)
+    sceneRef.current?.setMilkyWayVisible(s.showMilkyWay)
+    sceneRef.current?.setDeepSkyVisible(s.showDeepSky)
     sceneRef.current?.setEquatorialGridVisible(s.showEquatorialGrid)
     sceneRef.current?.setAltazGridVisible(s.showAltazGrid)
     sceneRef.current?.setMeteors(s.showMeteors, simTime)
@@ -78,6 +81,7 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
         scene.setConstellationMeta(meta)
         // Comets load on their own: the planetarium works without them.
         loadComets().then((comets) => scene.setCometData(comets)).catch(() => {})
+        loadMessier().then((objects) => { scene.setDeepSkyData(objects); addDeepSkyToSearch(objects) }).catch(() => {})
         buildSearchIndex(stars, meta)
         lastFrameRef.current = Date.now()
         scene.setFrameCallback(onFrame)
@@ -115,6 +119,8 @@ export default function PlanetariumCanvas({ onLoaded }: { onLoaded?: () => void 
       if (result) {
         if (result.type === 'star' && result.star) {
           s.selectObject({ type: 'star', star: result.star, altitude: result.altitude, azimuth: result.azimuth })
+        } else if (result.type === 'dso' && result.dso) {
+          s.selectObject({ type: 'dso', dso: result.dso, altitude: result.altitude, azimuth: result.azimuth })
         } else if (result.type === 'planet' && result.planet) {
           s.selectObject({ type: 'planet', planet: result.planet, altitude: result.altitude, azimuth: result.azimuth })
         }

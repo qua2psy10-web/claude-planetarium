@@ -1,14 +1,16 @@
 import type { HygStar } from './star'
 import type { ConstellationMeta } from './constellation'
 import type { PlanetData } from './planet'
+import type { MessierObject } from './dso'
 
-export type SelectedObjectType = 'star' | 'planet' | 'constellation'
+export type SelectedObjectType = 'star' | 'planet' | 'constellation' | 'dso'
 
 export interface SelectedObject {
   type: SelectedObjectType
   star?: HygStar
   planet?: PlanetData
   constellation?: ConstellationMeta
+  dso?: MessierObject
   altitude: number
   azimuth: number
 }
@@ -25,6 +27,8 @@ export type DisplayToggle =
   | 'showComets'
   | 'showAtmosphere'
   | 'showStarNames'
+  | 'showMilkyWay'
+  | 'showDeepSky'
 
 export interface PlanetariumState {
   simulatedTime: Date
@@ -51,6 +55,8 @@ export interface PlanetariumState {
   showComets: boolean
   showAtmosphere: boolean
   showStarNames: boolean
+  showMilkyWay: boolean
+  showDeepSky: boolean
 
   selectedObject: SelectedObject | null
 

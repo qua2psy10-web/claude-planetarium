@@ -1,12 +1,14 @@
 import * as THREE from 'three'
 import type { HygStar } from '@/types/star'
 import type { PlanetData } from '@/types/planet'
+import type { MessierObject } from '@/types/dso'
 import { equatorialToHorizontal, horizontalToCartesian, degToRad } from '@/engine/astronomy/coordinates'
 import { precessRaDec, type Mat3 } from '@/engine/astronomy/precession'
 
 interface PickResult {
-  type: 'star' | 'planet'
+  type: 'star' | 'planet' | 'dso'
   star?: HygStar
+  dso?: MessierObject
   planet?: PlanetData
   altitude: number
   azimuth: number
@@ -26,6 +28,7 @@ export class PickingManager {
     clientY: number,
     stars: HygStar[],
     planets: PlanetData[],
+    dsos: MessierObject[],
     lst: number,
     latRad: number,
     precession: Mat3,
@@ -72,6 +75,23 @@ export class PickingManager {
       if (dist < thr && dist < bestDist) {
         bestDist = dist
         result = { type: 'star', star, altitude, azimuth }
+      }
+    }
+
+    // Deep-sky objects last: a star inside a cluster still wins, but the body of a big
+    // object (the Pleiades, Andromeda) can be clicked anywhere within its outline.
+    if (!result) {
+      for (const o of dsos) {
+        const eq = precessRaDec(o.ra, o.dec, precession)
+        const { altitude, azimuth } = equatorialToHorizontal(eq.ra, eq.dec, lst, latRad)
+        if (altitude < -0.02) continue
+        const [x, y, z] = horizontalToCartesian(altitude, azimuth)
+        const dist = dir.distanceTo(new THREE.Vector3(x, y, z).normalize())
+        const reach = Math.max(threshold * 1.5, ((o.size / 60) * (Math.PI / 180)) / 2)
+        if (dist < reach && dist < bestDist) {
+          bestDist = dist
+          result = { type: 'dso', dso: o, altitude, azimuth }
+        }
       }
     }
 

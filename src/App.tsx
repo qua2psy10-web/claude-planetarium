@@ -33,11 +33,14 @@ export default function App() {
         <>
           <SearchBar />
           <LocationPanel />
-          <SettingsPanel />
-          <EclipsePanel />
-          <CometPanel />
-          <SatellitePanel />
-          <SharePanel />
+          {/* One row of round buttons; each opens a panel (a sheet under the header on phones). */}
+          <div data-no-labels className="absolute top-2 right-2 sm:top-4 sm:right-4 z-30 flex flex-row-reverse items-start gap-1 min-[400px]:gap-1.5 sm:gap-3.5">
+            <SettingsPanel />
+            <EclipsePanel />
+            <CometPanel />
+            <SatellitePanel />
+            <SharePanel />
+          </div>
           <InfoPanel />
           <TimeControls />
           <StatusBar />

@@ -13,7 +13,7 @@ export default function InfoPanel() {
   const starConstellation = star?.con ? findConstellation(star.con) : undefined
 
   return (
-    <div data-no-labels className="absolute top-16 right-4 z-30 w-64 max-h-[calc(100vh-6rem)] overflow-y-auto bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
+    <div data-no-labels className="absolute left-2 right-2 top-[6.25rem] max-h-[calc(100dvh-14rem)] sm:left-auto sm:right-4 sm:top-16 sm:w-64 sm:max-h-[calc(100vh-6rem)] z-30 overflow-y-auto bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
       <button
         onClick={() => selectObject(null)}
         className="absolute top-3 right-3 text-white/40 hover:text-white"

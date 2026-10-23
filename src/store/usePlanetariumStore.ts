@@ -20,6 +20,13 @@ export const DEFAULT_TOGGLES: Record<DisplayToggle, boolean> = {
   showSatellites: true,
 }
 
+/**
+ * The field of view is the vertical one, so on a phone held upright the width is only about 40% of it:
+ * start wider there (100 degrees is about 57 across) or the sky looks like a keyhole.
+ */
+const initialFov = () =>
+  typeof window !== 'undefined' && window.innerWidth < 800 && window.innerWidth < window.innerHeight ? 100 : 75
+
 const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
   simulatedTime: new Date(),
   isPlaying: true,
@@ -32,7 +39,7 @@ const usePlanetariumStore = create<PlanetariumState>((set, get) => ({
 
   viewAzimuth: 180,
   viewAltitude: 45,
-  fov: 75,
+  fov: initialFov(),
 
   ...DEFAULT_TOGGLES,
 

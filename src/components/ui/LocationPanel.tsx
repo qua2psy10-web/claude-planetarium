@@ -21,13 +21,13 @@ export default function LocationPanel() {
   }
 
   return (
-    <div data-no-labels className="absolute top-4 left-4 z-30">
+    <div data-no-labels className="absolute top-2 left-2 sm:top-4 sm:left-4 z-30">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 bg-black/70 backdrop-blur border border-white/20 rounded-full px-3 py-1.5 text-white/70 hover:text-white text-sm transition"
+        className="flex items-center gap-2 bg-black/70 backdrop-blur border border-white/20 rounded-full px-3 py-2.5 sm:py-1.5 text-white/70 hover:text-white text-sm transition"
       >
         <MapPin size={14} />
-        <span>{locationName || `${latitude.toFixed(1)}, ${longitude.toFixed(1)}`}</span>
+        <span className="max-w-[3rem] min-[360px]:max-w-[5rem] min-[400px]:max-w-[6.5rem] truncate sm:max-w-none">{locationName || `${latitude.toFixed(1)}, ${longitude.toFixed(1)}`}</span>
       </button>
 
       {open && (

@@ -49,17 +49,17 @@ export default function SatellitePanel() {
   }
 
   return (
-    <div data-no-labels className="absolute top-4 right-40 z-30">
+    <div data-no-labels className="relative">
       <button
         onClick={() => setOpen(!open)}
         title="国際宇宙ステーション (ISS)"
-        className="p-2 bg-black/70 backdrop-blur border border-white/20 rounded-full text-white/60 hover:text-white transition"
+        className="p-2.5 min-[400px]:p-3 sm:p-2 bg-black/70 backdrop-blur border border-white/20 rounded-full text-white/60 hover:text-white transition"
       >
         <Satellite size={16} />
       </button>
 
       {open && (
-        <div data-no-labels className="absolute top-12 right-0 w-80 max-h-[calc(100vh-7rem)] overflow-y-auto bg-black/85 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
+        <div data-no-labels className="fixed left-2 right-2 top-[6.25rem] max-h-[calc(100dvh-14rem)] sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-80 sm:max-h-[calc(100dvh-9rem)] overflow-y-auto bg-black/85 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
           <button onClick={() => setOpen(false)} className="absolute top-3 right-3 text-white/40 hover:text-white">
             <X size={14} />
           </button>

@@ -14,7 +14,7 @@ export default function StatusBar() {
   return (
     <div
       data-no-labels
-      className="absolute bottom-16 left-4 z-20 text-yellow-300/90 text-xs font-mono space-y-0.5 pointer-events-none"
+      className="absolute bottom-[9.5rem] min-[360px]:bottom-[6.25rem] left-3 sm:bottom-16 sm:left-4 z-20 text-yellow-300/90 text-[11px] sm:text-xs font-mono space-y-0.5 pointer-events-none"
       style={{ textShadow: '0 0 3px #000, 0 0 6px #000' }}
     >
       <div>{dayjs(simulatedTime).format('YYYY-MM-DD HH:mm:ss')}</div>

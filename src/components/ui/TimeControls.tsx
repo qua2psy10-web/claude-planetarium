@@ -29,12 +29,12 @@ export default function TimeControls() {
   const resetToNow = () => setTime(new Date())
 
   return (
-    <div data-no-labels className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2">
-      <div className="flex items-center gap-2 bg-black/70 backdrop-blur border border-white/20 rounded-xl px-4 py-2">
+    <div data-no-labels className="absolute bottom-2 sm:bottom-4 left-2 right-2 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-30 flex flex-col items-center gap-2">
+      <div className="flex w-full sm:w-auto flex-wrap justify-center items-center gap-x-2 min-[400px]:gap-x-3 gap-y-1.5 sm:flex-nowrap sm:gap-2 bg-black/70 backdrop-blur border border-white/20 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2">
         {/* Play/Pause */}
         <button
           onClick={togglePlay}
-          className="text-white hover:text-blue-300 transition p-1"
+          className="text-white hover:text-blue-300 transition p-2 sm:p-1"
           title={isPlaying ? '一時停止' : '再生'}
         >
           {isPlaying ? <Pause size={16} /> : <Play size={16} />}
@@ -46,7 +46,7 @@ export default function TimeControls() {
             <button
               key={s.value}
               onClick={() => setPlayback(s.value)}
-              className={`text-xs px-2 py-0.5 rounded transition ${
+              className={`text-xs px-2.5 py-1.5 sm:px-2 sm:py-0.5 rounded transition ${
                 playbackSpeed === s.value
                   ? 'bg-blue-500 text-white'
                   : 'text-white/50 hover:text-white'
@@ -57,14 +57,16 @@ export default function TimeControls() {
           ))}
         </div>
 
-        <div className="w-px h-4 bg-white/20" />
+        {/* On phones the controls take two lines: this forces the break after the speeds. */}
+        <div className="basis-full h-0 sm:hidden" />
+        <div className="hidden sm:block w-px h-4 bg-white/20" />
 
         {/* Date/time picker */}
         <input
           type="date"
           value={dayjs(simulatedTime).format('YYYY-MM-DD')}
           onChange={handleDateChange}
-          className="bg-transparent text-white/80 text-xs outline-none w-30"
+          className="bg-transparent text-white/80 text-xs outline-none w-[6.75rem] min-[400px]:w-30"
         />
         <input
           type="time"
@@ -76,7 +78,7 @@ export default function TimeControls() {
         {/* Reset to now */}
         <button
           onClick={resetToNow}
-          className="text-white/40 hover:text-white text-xs transition"
+          className="text-white/40 hover:text-white text-xs transition p-1.5 sm:p-0"
           title="現在時刻に戻す"
         >
           <SkipBack size={14} />
@@ -85,14 +87,14 @@ export default function TimeControls() {
         {/* 1 year forward/backward */}
         <button
           onClick={() => setTime(new Date(simulatedTime.getTime() - 86400000 * 365))}
-          className="text-white/40 hover:text-white text-xs transition"
+          className="text-white/40 hover:text-white text-xs transition p-1.5 sm:p-0"
           title="1年前"
         >
           -1y
         </button>
         <button
           onClick={() => setTime(new Date(simulatedTime.getTime() + 86400000 * 365))}
-          className="text-white/40 hover:text-white text-xs transition"
+          className="text-white/40 hover:text-white text-xs transition p-1.5 sm:p-0"
           title="1年後"
         >
           +1y

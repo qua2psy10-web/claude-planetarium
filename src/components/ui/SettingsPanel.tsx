@@ -34,7 +34,9 @@ export default function SettingsPanel() {
       </button>
 
       {open && (
-        <div className="mt-2 bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 w-48 text-white shadow-xl">
+        // Out of the flow, like the other panels: in the flow it widened the container, which is only as wide as
+        // the button, and the button slid left (under the neighbouring buttons) as soon as the panel opened.
+        <div className="absolute top-12 right-0 w-48 max-h-[calc(100vh-7rem)] overflow-y-auto bg-black/80 backdrop-blur border border-white/20 rounded-xl p-4 text-white shadow-xl">
           <div className="text-xs font-semibold text-white/60 mb-3 uppercase tracking-wider">表示設定</div>
           <div className="space-y-2">
             {TOGGLES.map(({ key, label }) => (
